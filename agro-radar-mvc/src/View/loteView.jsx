@@ -1,42 +1,125 @@
+import { MapaSelector } from './MapaSelector';
+
 export function LoteView({
-  diagnostico,
   ubicacion,
+  ubicacionNoDeterminada,
+  mostrarMapa,
+  onToggleMapa,
+  onReintentarGPS,
+  onSeleccionarPuntoMapa,
+  diagnostico,
   cargando,
   error,
-  onAnalizarGPS,
+  onAnalizar,
   onEscuchar,
 }) {
   return (
-    <div style={{ maxWidth: '440px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '460px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '26px', marginBottom: '16px', textAlign: 'center' }}>
         Asistente de Campo
       </h1>
 
-      {/* Tarjeta de Ubicación Actual siempre visible arriba */}
-      <div
-        style={{
-          marginBottom: '20px',
-          padding: '14px 16px',
-          borderRadius: '10px',
-          backgroundColor: '#f5f5f5',
-          borderLeft: '6px solid #1976d2',
-          color: '#111111',
-          textAlign: 'left',
-        }}
-      >
-        <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-          📍 {ubicacion ? ubicacion.nombreCorto : 'Detectando tu ubicación GPS...'}
-        </div>
-        {ubicacion && (
-          <div style={{ fontSize: '14px', color: '#444', marginTop: '4px' }}>
+      {/* Estado 1: Ubicación confirmada (por GPS válido o elegida en el mapa) */}
+      {ubicacion && !ubicacionNoDeterminada && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '14px 16px',
+            borderRadius: '10px',
+            backgroundColor: '#f5f5f5',
+            borderLeft: '6px solid #2e7d32',
+            color: '#111111',
+            textAlign: 'left',
+          }}
+        >
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+            📍 {ubicacion.nombreCorto}
+          </div>
+          <div style={{ fontSize: '13px', color: '#444', marginTop: '4px' }}>
             Coordenadas: {ubicacion.lat}, {ubicacion.lon}
           </div>
-        )}
-      </div>
+          <button
+            onClick={() => onToggleMapa(!mostrarMapa)}
+            style={{
+              marginTop: '10px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              borderRadius: '6px',
+              backgroundColor: '#1976d2',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {mostrarMapa ? '✖ Cerrar mapa' : '🗺️ Cambiar ubicación en el mapa'}
+          </button>
+        </div>
+      )}
 
+      {/* Estado 2: Ubicación NO determinada -> Pide ingresar manualmente en el mapa */}
+      {ubicacionNoDeterminada && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '14px 16px',
+            borderRadius: '10px',
+            backgroundColor: '#fff3e0',
+            borderLeft: '6px solid #e65100',
+            color: '#bf360c',
+            textAlign: 'left',
+          }}
+        >
+          <div style={{ fontSize: '17px', fontWeight: 'bold' }}>
+            ⚠️ Ubicación no determinada
+          </div>
+          <div style={{ fontSize: '14px', color: '#333', marginTop: '4px' }}>
+            El navegador no pudo obtener un GPS preciso. Ingresá manualmente seleccionando tu lote en el mapa:
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+            <button
+              onClick={() => onToggleMapa(true)}
+              style={{
+                padding: '8px 12px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                borderRadius: '6px',
+                backgroundColor: '#e65100',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              🗺️ Ingresar manualmente en el mapa
+            </button>
+            <button
+              onClick={onReintentarGPS}
+              style={{
+                padding: '8px 12px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                borderRadius: '6px',
+                backgroundColor: '#eeeeee',
+                color: '#111',
+                border: '1px solid #bbb',
+                cursor: 'pointer',
+              }}
+            >
+              🔄 Reintentar GPS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mapa interactivo para seleccionar el lote con un clic */}
+      {mostrarMapa && (
+        <MapaSelector onSeleccionarPunto={onSeleccionarPuntoMapa} />
+      )}
+
+      {/* Botones de acción agronómica */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
         <button
-          onClick={() => onAnalizarGPS('SIEMBRA')}
+          onClick={() => onAnalizar('SIEMBRA')}
           disabled={cargando}
           style={{
             flex: 1,
@@ -48,13 +131,14 @@ export function LoteView({
             color: 'white',
             border: 'none',
             cursor: 'pointer',
+            opacity: cargando ? 0.6 : 1,
           }}
         >
           🌱 ¿Se puede Sembrar?
         </button>
 
         <button
-          onClick={() => onAnalizarGPS('COSECHA')}
+          onClick={() => onAnalizar('COSECHA')}
           disabled={cargando}
           style={{
             flex: 1,
@@ -66,6 +150,7 @@ export function LoteView({
             color: 'white',
             border: 'none',
             cursor: 'pointer',
+            opacity: cargando ? 0.6 : 1,
           }}
         >
           🚜 ¿Se puede Cosechar?
@@ -74,12 +159,12 @@ export function LoteView({
 
       {cargando && (
         <p style={{ textAlign: 'center', fontSize: '18px', marginTop: '16px' }}>
-          Consultando datos satelitales de tu ubicación...
+          Consultando datos satelitales del lote...
         </p>
       )}
 
       {error && (
-        <p style={{ color: '#ff6b6b', fontSize: '18px', marginTop: '16px', textAlign: 'center' }}>
+        <p style={{ color: '#ff6b6b', fontSize: '16px', marginTop: '12px', textAlign: 'center' }}>
           ⚠️ {error}
         </p>
       )}

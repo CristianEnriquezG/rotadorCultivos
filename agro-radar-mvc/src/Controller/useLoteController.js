@@ -2,83 +2,100 @@ import { useState, useEffect } from 'react';
 import { SueloModel } from '../Model/sueloModel';
 import { ApiGeo } from './ApiGeo';
 
-// Coordenada de respaldo en Santiago del Estero cuando la PC no tiene chip GPS físico
-const LAT_DEFAULT_SDE = -27.7834;
-const LON_DEFAULT_SDE = -64.2642;
-
-function normalizarCoordenadas(lat, lon) {
-  // Si la PC devuelve hemisferio norte (lat > 0, ej. Ohio) por falta de GPS físico, usamos Sgo. del Estero
-  if (lat > -20 || lat < -56 || lon > -53 || lon < -74) {
-    return { lat: LAT_DEFAULT_SDE, lon: LON_DEFAULT_SDE };
-  }
-  return { lat, lon };
-}
-
 export function useLoteController() {
-  const [diagnostico, setDiagnostico] = useState(null);
+  const [coordenadas, setCoordenadas] = useState(null);
   const [ubicacion, setUbicacion] = useState(null);
+  const [ubicacionNoDeterminada, setUbicacionNoDeterminada] = useState(false);
+  const [mostrarMapa, setMostrarMapa] = useState(false);
+  const [diagnostico, setDiagnostico] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { lat, lon } = normalizarCoordenadas(
-          pos.coords.latitude,
-          pos.coords.longitude
-        );
-        const lugar = await ApiGeo.obtenerNombreLugar(lat, lon);
-        setUbicacion(lugar);
-      },
-      async () => {
-        const lugar = await ApiGeo.obtenerNombreLugar(LAT_DEFAULT_SDE, LON_DEFAULT_SDE);
-        setUbicacion(lugar);
-      },
-      { enableHighAccuracy: true }
-    );
-  }, []);
+  // Verifica si la coordenada viene de un GPS real o si falló por IP (ej. Ohio en PC)
+  const esUbicacionValida = (coords) => {
+    const { latitude, longitude, accuracy } = coords;
+    const dentroDeRegion =
+      latitude <= -21 && latitude >= -56 && longitude <= -53 && longitude >= -74;
+    // Si está fuera del país o el margen de error supera 50 km, la ubicación del navegador no es confiable
+    return dentroDeRegion && accuracy < 50000;
+  };
 
-  const analizarUbicacionGPS = (modo = 'SIEMBRA') => {
-    setCargando(true);
+  const fijarUbicacion = async (lat, lon) => {
+    setCoordenadas({ lat, lon });
+    setUbicacionNoDeterminada(false);
     setError(null);
+    const lugar = await ApiGeo.obtenerNombreLugar(lat, lon);
+    setUbicacion(lugar);
+  };
 
-    const ejecutarAnalisis = async (latCruda, lonCruda) => {
-      try {
-        const { lat, lon } = normalizarCoordenadas(latCruda, lonCruda);
-
-        const [resultadoSuelo, datosLugar] = await Promise.all([
-          modo === 'COSECHA'
-            ? SueloModel.obtenerDiagnosticoCosecha(lat, lon)
-            : SueloModel.obtenerDiagnosticoSiembra(lat, lon),
-          ApiGeo.obtenerNombreLugar(lat, lon),
-        ]);
-
-        setUbicacion(datosLugar);
-        setDiagnostico(resultadoSuelo);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setCargando(false);
-      }
-    };
-
+  const detectarGPSNavegador = () => {
     if (!navigator.geolocation) {
-      ejecutarAnalisis(LAT_DEFAULT_SDE, LON_DEFAULT_SDE);
+      setUbicacionNoDeterminada(true);
+      setMostrarMapa(true);
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => ejecutarAnalisis(pos.coords.latitude, pos.coords.longitude),
-      () => ejecutarAnalisis(LAT_DEFAULT_SDE, LON_DEFAULT_SDE),
-      { enableHighAccuracy: true }
+      async (pos) => {
+        if (esUbicacionValida(pos.coords)) {
+          await fijarUbicacion(pos.coords.latitude, pos.coords.longitude);
+          setMostrarMapa(false);
+        } else {
+          // El navegador devolvió una IP lejana (ej. Ohio) en vez de GPS real
+          setUbicacion(null);
+          setCoordenadas(null);
+          setUbicacionNoDeterminada(true);
+          setMostrarMapa(true);
+        }
+      },
+      () => {
+        // Error de hardware GPS o permiso denegado
+        setUbicacion(null);
+        setCoordenadas(null);
+        setUbicacionNoDeterminada(true);
+        setMostrarMapa(true);
+      },
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
     );
+  };
+
+  useEffect(() => {
+    detectarGPSNavegador();
+  }, []);
+
+  // Cuando el usuario selecciona manualmente su lote en el mapa
+  const seleccionarUbicacionManual = async (lat, lon) => {
+    await fijarUbicacion(lat, lon);
+    setDiagnostico(null);
+  };
+
+  const analizarLote = async (modo = 'SIEMBRA') => {
+    if (!coordenadas) {
+      setUbicacionNoDeterminada(true);
+      setMostrarMapa(true);
+      setError('Ubicación no determinada. Por favor seleccioná tu lote en el mapa.');
+      return;
+    }
+
+    setCargando(true);
+    setError(null);
+    try {
+      const resultado =
+        modo === 'COSECHA'
+          ? await SueloModel.obtenerDiagnosticoCosecha(coordenadas.lat, coordenadas.lon)
+          : await SueloModel.obtenerDiagnosticoSiembra(coordenadas.lat, coordenadas.lon);
+      setDiagnostico(resultado);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargando(false);
+    }
   };
 
   const reproducirAudio = () => {
     if (!diagnostico || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const textoLugar = ubicacion ? `Estás en ${ubicacion.nombreCorto}. ` : '';
+    const textoLugar = ubicacion ? `Ubicación: ${ubicacion.nombreCorto}. ` : '';
     const voz = new SpeechSynthesisUtterance(
       `${textoLugar}${diagnostico.titulo}. ${diagnostico.mensaje}`
     );
@@ -87,11 +104,16 @@ export function useLoteController() {
   };
 
   return {
-    diagnostico,
     ubicacion,
+    ubicacionNoDeterminada,
+    mostrarMapa,
+    setMostrarMapa,
+    diagnostico,
     cargando,
     error,
-    analizarUbicacionGPS,
+    detectarGPSNavegador,
+    seleccionarUbicacionManual,
+    analizarLote,
     reproducirAudio,
   };
 }

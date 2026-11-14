@@ -3,21 +3,31 @@ import { LoteView } from './View/LoteView';
 
 export default function App() {
   const {
-    diagnostico,
     ubicacion,
+    ubicacionNoDeterminada,
+    mostrarMapa,
+    setMostrarMapa,
+    diagnostico,
     cargando,
     error,
-    analizarUbicacionGPS,
+    detectarGPSNavegador,
+    seleccionarUbicacionManual,
+    analizarLote,
     reproducirAudio,
   } = useLoteController();
 
   return (
     <LoteView
-      diagnostico={diagnostico}
       ubicacion={ubicacion}
+      ubicacionNoDeterminada={ubicacionNoDeterminada}
+      mostrarMapa={mostrarMapa}
+      onToggleMapa={setMostrarMapa}
+      onReintentarGPS={detectarGPSNavegador}
+      onSeleccionarPuntoMapa={seleccionarUbicacionManual}
+      diagnostico={diagnostico}
       cargando={cargando}
       error={error}
-      onAnalizarGPS={(modo) => analizarUbicacionGPS(modo)}
+      onAnalizar={analizarLote}
       onEscuchar={reproducirAudio}
     />
   );
