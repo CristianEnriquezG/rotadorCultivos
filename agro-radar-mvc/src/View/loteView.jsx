@@ -1,27 +1,46 @@
 export function LoteView({
   diagnostico,
+  ubicacion,
   cargando,
   error,
   onAnalizarGPS,
-  onProbarFernandez,
   onEscuchar,
 }) {
   return (
     <div style={{ maxWidth: '440px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>
+      <h1 style={{ fontSize: '26px', marginBottom: '16px', textAlign: 'center' }}>
         Asistente de Campo
       </h1>
 
-      <p style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>
-        📍 Con mi ubicación actual (GPS):
-      </p>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
+      {/* Tarjeta de Ubicación Actual siempre visible arriba */}
+      <div
+        style={{
+          marginBottom: '20px',
+          padding: '14px 16px',
+          borderRadius: '10px',
+          backgroundColor: '#f5f5f5',
+          borderLeft: '6px solid #1976d2',
+          color: '#111111',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+          📍 {ubicacion ? ubicacion.nombreCorto : 'Detectando tu ubicación GPS...'}
+        </div>
+        {ubicacion && (
+          <div style={{ fontSize: '14px', color: '#444', marginTop: '4px' }}>
+            Coordenadas: {ubicacion.lat}, {ubicacion.lon}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
         <button
           onClick={() => onAnalizarGPS('SIEMBRA')}
           disabled={cargando}
           style={{
             flex: 1,
-            padding: '16px 10px',
+            padding: '18px 10px',
             fontSize: '18px',
             fontWeight: 'bold',
             borderRadius: '10px',
@@ -39,7 +58,7 @@ export function LoteView({
           disabled={cargando}
           style={{
             flex: 1,
-            padding: '16px 10px',
+            padding: '18px 10px',
             fontSize: '18px',
             fontWeight: 'bold',
             borderRadius: '10px',
@@ -53,50 +72,14 @@ export function LoteView({
         </button>
       </div>
 
-      <p style={{ fontSize: '15px', color: '#555', marginBottom: '8px' }}>
-        🧪 Prueba rápida en Fernández (Sgo. del Estero):
-      </p>
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button
-          onClick={() => onProbarFernandez('SIEMBRA')}
-          disabled={cargando}
-          style={{
-            flex: 1,
-            padding: '10px',
-            fontSize: '14px',
-            borderRadius: '8px',
-            backgroundColor: '#eeeeee',
-            border: '1px solid #ccc',
-            cursor: 'pointer',
-          }}
-        >
-          Probar Siembra
-        </button>
-        <button
-          onClick={() => onProbarFernandez('COSECHA')}
-          disabled={cargando}
-          style={{
-            flex: 1,
-            padding: '10px',
-            fontSize: '14px',
-            borderRadius: '8px',
-            backgroundColor: '#eeeeee',
-            border: '1px solid #ccc',
-            cursor: 'pointer',
-          }}
-        >
-          Probar Cosecha
-        </button>
-      </div>
-
       {cargando && (
         <p style={{ textAlign: 'center', fontSize: '18px', marginTop: '16px' }}>
-          Consultando datos satelitales del lote...
+          Consultando datos satelitales de tu ubicación...
         </p>
       )}
 
       {error && (
-        <p style={{ color: '#d32f2f', fontSize: '18px', marginTop: '16px' }}>
+        <p style={{ color: '#ff6b6b', fontSize: '18px', marginTop: '16px', textAlign: 'center' }}>
           ⚠️ {error}
         </p>
       )}
@@ -104,7 +87,7 @@ export function LoteView({
       {diagnostico && !cargando && (
         <div
           style={{
-            marginTop: '24px',
+            marginTop: '16px',
             padding: '20px',
             borderRadius: '12px',
             backgroundColor: diagnostico.color,
@@ -138,7 +121,7 @@ export function LoteView({
               borderRadius: '8px',
               border: 'none',
               backgroundColor: 'white',
-              color: '#111',
+              color: '#111111',
               cursor: 'pointer',
             }}
           >

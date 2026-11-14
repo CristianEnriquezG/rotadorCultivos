@@ -1,7 +1,15 @@
-import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/conae-wms': {
+        target: 'https://geoservicios.conae.gov.ar',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/conae-wms/, '/geoserver/wms'),
+      },
+    },
+  },
 })

@@ -4,20 +4,20 @@ import { LoteView } from './View/LoteView';
 export default function App() {
   const {
     diagnostico,
+    ubicacion,
     cargando,
     error,
     analizarUbicacionGPS,
-    analizarCoordenadas,
     reproducirAudio,
   } = useLoteController();
 
   return (
     <LoteView
       diagnostico={diagnostico}
+      ubicacion={ubicacion}
       cargando={cargando}
       error={error}
       onAnalizarGPS={(modo) => analizarUbicacionGPS(modo)}
-      onProbarFernandez={(modo) => analizarCoordenadas(-27.9150, -63.8550, modo)}
       onEscuchar={reproducirAudio}
     />
   );

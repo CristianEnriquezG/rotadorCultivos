@@ -1,28 +1,44 @@
-// Ejemplo de endpoint en Node.js (/api/humedad)
-export async function getHumedadSuelo(lat, lon) {
-  // Construimos un micro-recuadro (Bounding Box) alrededor del punto GPS
-  const delta = 0.001;
-  const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+export class ApiConae {
+  /**
+   * Consulta el valor del píxel en una capa WMS de CONAE (SAOCOM / PROSAT)
+   */
+  static async consultarPixelWMS(
+    lat,
+    lon,
+    capa = 'PROSATII:AOHUMEDALES_CCH_20200502_20230316_gEBSUPHIIS6'
+  ) {
+    const delta = 0.002;
+    const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
 
-  // URL del servicio WMS de CONAE extraída del XML de metadatos
-  const wmsUrl = new URL('https://geoservicios.conae.gov.ar/geoserver/wms');
-  wmsUrl.searchParams.append('SERVICE', 'WMS');
-  wmsUrl.searchParams.append('VERSION', '1.1.1');
-  wmsUrl.searchParams.append('REQUEST', 'GetFeatureInfo');
-  wmsUrl.searchParams.append('LAYERS', 'MHS:CONAE_MOD_MHS_DSS_MSM'); // Capa del registro
-  wmsUrl.searchParams.append('QUERY_LAYERS', 'MHS:CONAE_MOD_MHS_DSS_MSM');
-  wmsUrl.searchParams.append('INFO_FORMAT', 'application/json');
-  wmsUrl.searchParams.append('SRS', 'EPSG:4326');
-  wmsUrl.searchParams.append('WIDTH', '10');
-  wmsUrl.searchParams.append('HEIGHT', '10');
-  wmsUrl.searchParams.append('X', '5');
-  wmsUrl.searchParams.append('Y', '5');
-  wmsUrl.searchParams.append('BBOX', bbox);
+    const params = new URLSearchParams({
+      SERVICE: 'WMS',
+      VERSION: '1.1.1',
+      REQUEST: 'GetFeatureInfo',
+      LAYERS: capa,
+      QUERY_LAYERS: capa,
+      INFO_FORMAT: 'application/json',
+      SRS: 'EPSG:4326',
+      BBOX: bbox,
+      WIDTH: '10',
+      HEIGHT: '10',
+      X: '5',
+      Y: '5',
+    });
 
-  const response = await fetch(wmsUrl.toString());
-  const data = await response.json();
+    const response = await fetch(`/conae-wms?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error('Servidor WMS de CONAE no disponible');
+    }
 
-  // Extraemos el valor numérico puro del píxel
-  const valorHumedad = data.features?.[0]?.properties?.GRAY_INDEX ?? null;
-  return valorHumedad;
+    const data = await response.json();
+    const propiedades = data.features?.[0]?.properties || null;
+
+    return {
+      fuente: 'CONAE (SAOCOM / GeoServicios)',
+      capaConsultada: capa,
+      propiedadesCrudas: propiedades,
+      // Extrae GRAY_INDEX o el primer atributo numérico que devuelva el raster/vector de CONAE
+      valor: propiedades ? Object.values(propiedades)[0] : null,
+    };
+  }
 }
