@@ -6,12 +6,14 @@ export function useLoteController() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
 
-  // Acción 1: Analizar coordenadas específicas (ej. Fernández, Santiago del Estero)
-  const analizarCoordenadas = async (lat, lon) => {
+  const analizarCoordenadas = async (lat, lon, modo = 'SIEMBRA') => {
     setCargando(true);
     setError(null);
     try {
-      const resultado = await SueloModel.obtenerDiagnostico(lat, lon);
+      const resultado =
+        modo === 'COSECHA'
+          ? await SueloModel.obtenerDiagnosticoCosecha(lat, lon)
+          : await SueloModel.obtenerDiagnosticoSiembra(lat, lon);
       setDiagnostico(resultado);
     } catch (err) {
       setError(err.message);
@@ -20,8 +22,7 @@ export function useLoteController() {
     }
   };
 
-  // Acción 2: Usar el GPS real del celular del productor en el campo
-  const analizarUbicacionGPS = () => {
+  const analizarUbicacionGPS = (modo = 'SIEMBRA') => {
     if (!navigator.geolocation) {
       setError('Tu teléfono no soporta ubicación GPS.');
       return;
@@ -29,15 +30,14 @@ export function useLoteController() {
 
     setCargando(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => analizarCoordenadas(pos.coords.latitude, pos.coords.longitude),
+      (pos) => analizarCoordenadas(pos.coords.latitude, pos.coords.longitude, modo),
       () => {
-        setError('No pudimos obtener tu ubicación. Activa el GPS del teléfono.');
+        setError('No pudimos obtener tu ubicación. Activa el GPS.');
         setCargando(false);
       }
     );
   };
 
-  // Acción 3: Leer la recomendación en voz alta
   const reproducirAudio = () => {
     if (!diagnostico || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();

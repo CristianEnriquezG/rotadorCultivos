@@ -1,5 +1,5 @@
 import { useLoteController } from './Controller/useLoteController';
-import { LoteView } from './View/loteView';
+import { LoteView } from './View/LoteView';
 
 export default function App() {
   const {
@@ -16,8 +16,8 @@ export default function App() {
       diagnostico={diagnostico}
       cargando={cargando}
       error={error}
-      onAnalizarGPS={analizarUbicacionGPS}
-      onProbarFernandez={() => analizarCoordenadas(-27.9150, -63.8550)}
+      onAnalizarGPS={(modo) => analizarUbicacionGPS(modo)}
+      onProbarFernandez={(modo) => analizarCoordenadas(-27.9150, -63.8550, modo)}
       onEscuchar={reproducirAudio}
     />
   );
