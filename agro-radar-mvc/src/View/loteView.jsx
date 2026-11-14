@@ -19,7 +19,7 @@ export function LoteView({
           fontSize: '20px',
           fontWeight: 'bold',
           borderRadius: '10px',
-          backgroundColor: '#1976d2',
+          backgroundColor: '#1976d3',
           color: 'white',
           border: 'none',
           cursor: 'pointer',

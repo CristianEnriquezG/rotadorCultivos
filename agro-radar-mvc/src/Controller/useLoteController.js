@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SueloModel } from '../models/SueloModel';
+import { SueloModel } from '../Model/sueloModel';
 
 export function useLoteController() {
   const [diagnostico, setDiagnostico] = useState(null);
