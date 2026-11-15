@@ -217,17 +217,83 @@ export function LoteView({
             {mensajeTraducido}
           </p>
 
-          <BloqueResultado titulo={textos.humedadUtilizadaTitulo || "Humedad utilizada"}>
-            <p style={parrafoDetalle}>
-              • {textos.superficial || "Superficial (0-1 cm)"}: <strong>{formatearPorcentaje(humedadArriba)}</strong>
-            </p>
-            <p style={parrafoDetalle}>
-              • {textos.profunda || "Profunda (9-27 cm)"}: <strong>{formatearPorcentaje(humedadAbajo)}</strong>
-            </p>
-            <p style={parrafoDetalle}>
-              • {textos.fuente || "Fuente"}: <strong>{usarHumedadManual ? "Instrumentos en lote" : "OpenWeather + Open-Meteo"}</strong>
-            </p>
-          </BloqueResultado>
+          {diagnostico.humedadUtilizada && (
+            <BloqueResultado titulo={t.humedadUtilizada}>
+              <p style={parrafoDetalle}>
+                {t.superficial}:{" "}
+                {formatearPorcentaje(
+                  diagnostico.humedadUtilizada.arriba ??
+                    extraerPorcentajesDeMensaje(diagnostico.mensaje).arriba,
+                  t.noDisponible
+                )}
+              </p>
+              <p style={parrafoDetalle}>
+                {t.profunda}:{" "}
+                {formatearPorcentaje(
+                  diagnostico.humedadUtilizada.abajo ??
+                    extraerPorcentajesDeMensaje(diagnostico.mensaje).abajo,
+                  t.noDisponible
+                )}
+              </p>
+              <p style={parrafoDetalle}>
+                {t.fuente}:{" "}
+                {normalizarFuente(diagnostico.humedadUtilizada.fuente, idioma)}
+              </p>
+            </BloqueResultado>
+          )}
+
+          {diagnostico.contextoClimatico && (
+            <BloqueResultado titulo={t.contextoClimatico}>
+              <p style={parrafoDetalle}>
+                {traducirContextoClimatico(
+                  diagnostico.contextoClimatico.explicacion,
+                  idioma
+                )}
+              </p>
+              {diagnostico.contextoClimatico.periodo && (
+                <p style={parrafoDetalle}>
+                  {t.periodo}: {diagnostico.contextoClimatico.periodo}
+                </p>
+              )}
+              {diagnostico.contextoClimatico.fuente && (
+                <p style={parrafoDetalle}>
+                  {t.fuente}: {diagnostico.contextoClimatico.fuente}
+                </p>
+              )}
+            </BloqueResultado>
+          )}
+
+          {fuentesLimpias?.length > 0 && (
+            <BloqueResultado titulo={t.fuentesUtilizadas}>
+              <p style={parrafoDetalle}>{fuentesLimpias.join(" + ")}</p>
+            </BloqueResultado>
+          )}
+
+          {advertenciasLimpias?.length > 0 && (
+            <BloqueResultado titulo={t.advertencias}>
+              <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                {advertenciasLimpias.map((advertencia, indice) => (
+                  <li
+                    key={`${advertencia}-${indice}`}
+                    style={{ marginBottom: "6px" }}
+                  >
+                    {traducirTextoDinamico(advertencia, idioma)}
+                  </li>
+                ))}
+              </ul>
+            </BloqueResultado>
+          )}
+
+          <p
+            style={{
+              margin: "14px 0 0",
+              fontSize: "12px",
+              lineHeight: 1.4,
+              opacity: 0.9,
+            }}
+          >
+            {t.notaOrientativa}
+          </p>
 
           <button
             type="button"
@@ -259,6 +325,70 @@ export function LoteView({
       />
     </div>
   );
+}
+
+function normalizarFuente(fuente, idioma = "es") {
+  if (!fuente) return "OpenWeather";
+  const texto = String(fuente).toUpperCase();
+  if (texto.includes("CONAE") || texto.includes("OPEN-METEO")) {
+    return "OpenWeather";
+  }
+  if (idioma === "en" && texto.includes("MANUAL")) {
+    return "Manual / Field sensor";
+  }
+  return fuente;
+}
+
+function traducirContextoClimatico(texto, idioma = "es") {
+  if (!texto) {
+    return idioma === "en"
+      ? "NASA POWER did not return historical information for the current month."
+      : "NASA POWER no devolvió información histórica para el mes actual.";
+  }
+
+  if (idioma !== "en") {
+    return texto;
+  }
+
+  const meses = {
+    Enero: "January",
+    Febrero: "February",
+    Marzo: "March",
+    Abril: "April",
+    Mayo: "May",
+    Junio: "June",
+    Julio: "July",
+    Agosto: "August",
+    Septiembre: "September",
+    Octubre: "October",
+    Noviembre: "November",
+    Diciembre: "December",
+  };
+
+  let traducido = String(texto);
+
+  Object.entries(meses).forEach(([mesEs, mesEn]) => {
+    traducido = traducido.replace(new RegExp(`\\b${mesEs}\\b`, "g"), mesEn);
+  });
+
+  const reemplazos = [
+    ["NASA POWER no devolvió un resumen para el mes actual.", "NASA POWER did not return a summary for the current month."],
+    ["NASA POWER no devolvió información histórica para el mes actual.", "NASA POWER did not return historical information for the current month."],
+    ["precipitación media no disponible", "average precipitation unavailable"],
+    ["temperatura máxima media no disponible", "average maximum temperature unavailable"],
+    ["mm de precipitación media", "mm of average precipitation"],
+    ["°C de temperatura máxima media", "°C average maximum temperature"],
+    ["°C de máxima media", "°C average maximum temperature"],
+    ["La mayor racha seca del período fue de", "The longest dry spell in the period was"],
+    ["días.", "days."],
+    [" y ", " and "],
+  ];
+
+  reemplazos.forEach(([es, en]) => {
+    traducido = traducido.split(es).join(en);
+  });
+
+  return traducido;
 }
 
 function extraerPorcentajesDeMensaje(mensaje = "") {
