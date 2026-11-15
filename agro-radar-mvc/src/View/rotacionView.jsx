@@ -1,12 +1,17 @@
 import { CATALOGO_CULTIVOS } from "../Model/rotacionModel";
 
 export function RotacionView({
+  idioma = "es",
+  textos = {},
   cultivoAnterior,
   onCambiarCultivoAnterior,
   evaluacionRotacion,
   onEscucharRotacion,
 }) {
   if (!evaluacionRotacion) return null;
+
+  const t = textos;
+  const lang = idioma === "en" ? "en" : "es";
 
   return (
     <section
@@ -21,10 +26,10 @@ export function RotacionView({
       }}
     >
       <h3 style={{ margin: "0 0 6px", fontSize: "18px", color: "#1b5e20" }}>
-        🔄 Rotación de Cultivo y Desgaste del Lote
+        {t.rotacionTitulo}
       </h3>
       <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#444" }}>
-        Seleccioná el cultivo del ciclo anterior para estimar el desgaste del suelo y qué conviene sembrar.
+        {t.rotacionDesc}
       </p>
 
       {/* Selector de cultivo del ciclo anterior */}
@@ -42,7 +47,7 @@ export function RotacionView({
             <button
               key={item.id}
               type="button"
-              onClick={() => onCambiarCultivoAnterior(item.id)}
+              onClick={() => onCambiarCultivoAnterior?.(item.id)}
               style={{
                 padding: "8px 6px",
                 borderRadius: "8px",
@@ -59,7 +64,7 @@ export function RotacionView({
               }}
             >
               <span style={{ fontSize: "20px" }}>{item.icono}</span>
-              <span>{item.nombre}</span>
+              <span>{item.nombre[lang]}</span>
             </button>
           );
         })}
@@ -84,7 +89,7 @@ export function RotacionView({
           }}
         >
           <span style={{ fontWeight: "bold", fontSize: "14px" }}>
-            Desgaste dejado por {evaluacionRotacion.nombreAnterior}
+            {t.desgasteDejadoPor} {evaluacionRotacion.nombreAnterior}
           </span>
           <span
             style={{
@@ -125,10 +130,10 @@ export function RotacionView({
         </p>
 
         <div style={{ fontSize: "12px", color: "#333", lineHeight: 1.5 }}>
-          <div>💧 <strong>Uso de agua / Kc:</strong> {evaluacionRotacion.consumoAgua} (Kc {evaluacionRotacion.kcPromedio})</div>
-          <div>🧪 <strong>Nitrógeno:</strong> {evaluacionRotacion.balanceNitrogeno}</div>
-          <div>🍂 <strong>Rastrojo / Carbono:</strong> {evaluacionRotacion.balanceCarbono}</div>
-          <div>🌊 <strong>Efecto en napa:</strong> {evaluacionRotacion.efectoNapa}</div>
+          <div>💧 <strong>{t.usoAgua}:</strong> {evaluacionRotacion.consumoAgua} (Kc {evaluacionRotacion.kcPromedio})</div>
+          <div>🧪 <strong>{t.nitrogeno}:</strong> {evaluacionRotacion.balanceNitrogeno}</div>
+          <div>🍂 <strong>{t.rastrojoCarbono}:</strong> {evaluacionRotacion.balanceCarbono}</div>
+          <div>🌊 <strong>{t.efectoNapa}:</strong> {evaluacionRotacion.efectoNapa}</div>
         </div>
 
         {evaluacionRotacion.alertaNitrato && (
@@ -159,7 +164,7 @@ export function RotacionView({
         }}
       >
         <div style={{ fontSize: "11px", textTransform: "uppercase", opacity: 0.9, fontWeight: "bold" }}>
-          Recomendación de Rotación ({evaluacionRotacion.condicionHidricaTexto})
+          {t.recomendacionRotacion} ({evaluacionRotacion.condicionHidricaTexto})
         </div>
         <h4 style={{ margin: "4px 0 6px", fontSize: "19px" }}>
           {evaluacionRotacion.recomendacion.icono} {evaluacionRotacion.recomendacion.cultivo}
@@ -183,7 +188,7 @@ export function RotacionView({
             cursor: "pointer",
           }}
         >
-          🔊 Escuchar rotación recomendada
+          {t.escucharRotacion}
         </button>
       </div>
     </section>

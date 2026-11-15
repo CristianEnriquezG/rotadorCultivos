@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SueloModel } from "../Model/sueloModel";
+import { RotacionModel } from "../Model/rotacionModel";
+import {
+  TEXTOS,
+  traducirTextoDinamico,
+  traducirContextoClimatico,
+} from "../Model/textosIdioma";
 import { ApiGeo } from "./ApiGeo";
 import { obtenerHistorialNasa } from "./apiNasa";
 
 const ANIO_INICIO_NASA = 2015;
 const ANIO_FIN_NASA = 2025;
 
-export function useLoteController() {
+export function useLoteController({ idioma = "es" } = {}) {
   const [coordenadas, setCoordenadas] = useState(null);
   const [ubicacion, setUbicacion] = useState(null);
   const [ubicacionNoDeterminada, setUbicacionNoDeterminada] = useState(false);
@@ -21,6 +27,16 @@ export function useLoteController() {
     fecha: fechaLocalParaInput(),
     metodo: "sensor",
   });
+
+  // --- Rotación de cultivos ---
+  const [cultivoAnterior, setCultivoAnterior] = useState("soja");
+
+  // Se recalcula cada vez que cambia el cultivo anterior o llega un diagnóstico nuevo
+  // (así la recomendación se ajusta a la humedad real medida en el lote).
+  const evaluacionRotacion = useMemo(
+    () => RotacionModel.evaluarRotacion(cultivoAnterior, diagnostico, idioma),
+    [cultivoAnterior, diagnostico, idioma],
+  );
 
   const esUbicacionValida = (coords) => {
     const { latitude, longitude, accuracy } = coords;
@@ -90,6 +106,10 @@ export function useLoteController() {
       ...actual,
       [campo]: valor,
     }));
+  };
+
+  const cambiarCultivoAnterior = (id) => {
+    setCultivoAnterior(id);
   };
 
   const analizarLote = async (modo = "SIEMBRA") => {
@@ -169,25 +189,53 @@ export function useLoteController() {
     }
   };
 
-  const reproducirAudio = () => {
-    if (!diagnostico || !window.speechSynthesis) return;
-
+  const hablar = (texto) => {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
+    const voz = new SpeechSynthesisUtterance(texto);
+    voz.lang = idioma === "en" ? "en-US" : "es-AR";
+    window.speechSynthesis.speak(voz);
+  };
+
+  const reproducirAudio = () => {
+    if (!diagnostico) return;
+
+    const t = TEXTOS[idioma] ?? TEXTOS.es;
 
     const textoLugar = ubicacion
-      ? `Ubicación: ${ubicacion.nombreCorto}. `
+      ? `${t.ubicacionAudio}: ${traducirTextoDinamico(ubicacion.nombreCorto, idioma)}. `
       : "";
 
     const contexto = diagnostico.contextoClimatico?.explicacion
-      ? ` ${diagnostico.contextoClimatico.explicacion}`
+      ? ` ${traducirContextoClimatico(diagnostico.contextoClimatico.explicacion, idioma)}`
       : "";
 
-    const voz = new SpeechSynthesisUtterance(
-      `${textoLugar}${diagnostico.titulo}. ${diagnostico.mensaje}.${contexto}`,
-    );
+    const titulo = traducirTextoDinamico(diagnostico.titulo, idioma);
+    const mensaje = traducirTextoDinamico(diagnostico.mensaje, idioma);
 
-    voz.lang = "es-AR";
-    window.speechSynthesis.speak(voz);
+    hablar(`${textoLugar}${titulo}. ${mensaje}${contexto}`);
+  };
+
+  const reproducirAudioRotacion = () => {
+    if (!evaluacionRotacion) return;
+
+    const r = evaluacionRotacion;
+    const alerta = r.alertaNitrato ? ` ${r.alertaNitrato}` : "";
+
+    const texto =
+      idioma === "en"
+        ? `Previous crop: ${r.nombreAnterior}. ` +
+          `Estimated field wear: ${r.desgastePorcentaje} percent. ` +
+          `${r.resumenDesgaste}${alerta} ` +
+          `${r.condicionHidricaTexto}. ` +
+          `Recommended next crop: ${r.recomendacion.cultivo}. ${r.recomendacion.motivo}`
+        : `Cultivo anterior: ${r.nombreAnterior}. ` +
+          `Desgaste estimado del lote: ${r.desgastePorcentaje} por ciento. ` +
+          `${r.resumenDesgaste}${alerta} ` +
+          `${r.condicionHidricaTexto}. ` +
+          `Se recomienda sembrar ${r.recomendacion.cultivo}. ${r.recomendacion.motivo}`;
+
+    hablar(texto);
   };
 
   return {
@@ -206,6 +254,11 @@ export function useLoteController() {
     setUsarHumedadManual,
     humedadManual,
     actualizarHumedadManual,
+    // Rotación
+    cultivoAnterior,
+    cambiarCultivoAnterior,
+    evaluacionRotacion,
+    reproducirAudioRotacion,
   };
 }
 
@@ -298,6 +351,7 @@ function extraerHumedadDiagnostico(diagnostico) {
   if (!diagnostico) return null;
 
   const arriba = primerNumeroValido([
+    diagnostico.humedadUtilizada?.arriba,
     diagnostico.humedadArriba,
     diagnostico.humedadSuperficial,
     diagnostico.arriba,
@@ -306,6 +360,7 @@ function extraerHumedadDiagnostico(diagnostico) {
   ]);
 
   const abajo = primerNumeroValido([
+    diagnostico.humedadUtilizada?.abajo,
     diagnostico.humedadAbajo,
     diagnostico.humedadProfunda,
     diagnostico.abajo,
@@ -313,11 +368,13 @@ function extraerHumedadDiagnostico(diagnostico) {
     diagnostico.datos?.humedadProfunda,
   ]);
 
+  const fuente = diagnostico.humedadUtilizada?.fuente ?? "OpenWeather";
+
   if (arriba === null && abajo === null) {
     return {
       arriba: null,
       abajo: null,
-      fuente: "CONAE",
+      fuente,
       fecha: null,
     };
   }
@@ -325,16 +382,18 @@ function extraerHumedadDiagnostico(diagnostico) {
   return {
     arriba,
     abajo,
-    fuente: "CONAE",
+    fuente,
     fecha: diagnostico.fecha ?? null,
   };
 }
 
 function primerNumeroValido(valores) {
   for (const valor of valores) {
+    if (valor === null || valor === undefined || valor === "") continue;
+
     const numero = Number(valor);
 
-    if (valor !== "" && Number.isFinite(numero) && numero !== -999) {
+    if (Number.isFinite(numero) && numero !== -999) {
       return numero;
     }
   }
@@ -378,6 +437,8 @@ function evaluarHumedadManual(medicion, modo) {
   if (promedio < 20) {
     return {
       tipo: "SECO",
+      semaforo: "ROJO",
+      color: "#d32f2f",
       titulo:
         modo === "COSECHA"
           ? "Humedad baja: revisar antes de cosechar"
@@ -389,6 +450,8 @@ function evaluarHumedadManual(medicion, modo) {
   if (promedio <= 60) {
     return {
       tipo: "FAVORABLE",
+      semaforo: "VERDE",
+      color: "#2e7d32",
       titulo:
         modo === "COSECHA"
           ? "Humedad intermedia: verificar el cultivo"
@@ -399,6 +462,8 @@ function evaluarHumedadManual(medicion, modo) {
 
   return {
     tipo: "HUMEDO",
+    semaforo: "AMARILLO",
+    color: "#ef6c00",
     titulo:
       modo === "COSECHA"
         ? "Humedad elevada: posponer la cosecha"

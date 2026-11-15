@@ -1,5 +1,8 @@
 import { MapaSelector } from "./mapaSelector";
-import { traducirTextoDinamico } from "../Model/textosIdioma";
+import {
+  traducirTextoDinamico,
+  traducirContextoClimatico,
+} from "../Model/textosIdioma";
 import { RotacionView } from "./rotacionView";
 
 export function LoteView({
@@ -25,22 +28,17 @@ export function LoteView({
   evaluacionRotacion,
   onEscucharRotacion,
 }) {
+  const t = textos;
+  const fuentesLimpias = [
+    ...new Set((diagnostico?.fuentes ?? []).map((f) => normalizarFuente(f, idioma))),
+  ];
+  const advertenciasLimpias = diagnostico?.advertencias ?? [];
   const tituloTraducido = diagnostico
     ? traducirTextoDinamico(diagnostico.titulo, idioma)
     : "";
   const mensajeTraducido = diagnostico
     ? traducirTextoDinamico(diagnostico.mensaje, idioma)
     : "";
-
-  const extraidos = extraerPorcentajesDeMensaje(diagnostico?.mensaje);
-  const humedadArriba =
-    diagnostico?.humedadUtilizada?.arriba ??
-    diagnostico?.metricas?.humSuperficial ??
-    extraidos.arriba;
-  const humedadAbajo =
-    diagnostico?.humedadUtilizada?.abajo ??
-    diagnostico?.metricas?.humProfunda ??
-    extraidos.abajo;
 
   return (
     <div style={{ width: "100%", fontFamily: "sans-serif" }}>
@@ -61,7 +59,7 @@ export function LoteView({
             cursor: "pointer",
           }}
         >
-          ⬅ {textos.volverInicio || (idioma === "en" ? "Back to mode selection" : "Cambiar modo de medición")}
+          ⬅ {t.volverInicio}
         </button>
       )}
 
@@ -80,17 +78,22 @@ export function LoteView({
         }}
       >
         <div style={{ fontSize: "17px", fontWeight: "bold" }}>
-          📍{" "}
           {ubicacion
-            ? ubicacion.nombreCorto
+            ? `📍 ${traducirTextoDinamico(ubicacion.nombreCorto, idioma)}`
             : ubicacionNoDeterminada
-            ? textos.ubicacionNoDeterminada || "Ubicación no determinada"
-            : textos.detectandoGPS || "Detectando tu ubicación GPS..."}
+            ? `⚠️ ${t.ubicacionNoDeterminada}`
+            : `📍 ${t.detectandoGPS}`}
         </div>
 
         {ubicacion && (
           <div style={{ fontSize: "13px", color: "#444", marginTop: "4px" }}>
-            {textos.coordenadas || "Coordenadas"}: {ubicacion.lat}, {ubicacion.lon}
+            {t.coordenadas}: {ubicacion.lat}, {ubicacion.lon}
+          </div>
+        )}
+
+        {!ubicacion && ubicacionNoDeterminada && (
+          <div style={{ fontSize: "13px", color: "#444", marginTop: "4px" }}>
+            {t.ubicacionNoDeterminadaDesc}
           </div>
         )}
 
@@ -101,7 +104,7 @@ export function LoteView({
               onClick={() => onToggleMapa(!mostrarMapa)}
               style={botonUbicacion}
             >
-              🗺️ {mostrarMapa ? (textos.ocultarMapa || "Ocultar mapa") : (textos.elegirEnMapa || "Elegir lote en el mapa")}
+              🗺️ {mostrarMapa ? t.ocultarMapa : t.elegirEnMapa}
             </button>
           )}
           {onReintentarGPS && (
@@ -110,7 +113,7 @@ export function LoteView({
               onClick={onReintentarGPS}
               style={{ ...botonUbicacion, backgroundColor: "#455a64" }}
             >
-              📡 {textos.usarGPS || "Usar mi GPS"}
+              📡 {t.usarGPS}
             </button>
           )}
         </div>
@@ -121,6 +124,7 @@ export function LoteView({
         <div style={{ marginBottom: "16px" }}>
           <MapaSelector
             coordenadasActuales={ubicacion}
+            textos={t}
             onSeleccionarPunto={onSeleccionarPuntoMapa}
           />
         </div>
@@ -140,24 +144,24 @@ export function LoteView({
           }}
         >
           <h3 style={{ margin: "0 0 10px", fontSize: "16px", color: "#1565c0" }}>
-            📟 {textos.medicionInstrumentos || "Medición con instrumentos"}
+            📟 {t.medicionInstrumentos}
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <Campo etiqueta={textos.humedadSuperficial || "Humedad superficial (%)"}>
+            <Campo etiqueta={t.humedadSuperficial} ayuda={t.ayudaSuperficial}>
               <input
                 type="number"
                 step="0.1"
-                placeholder="Ej: 24"
+                placeholder={`${t.ejemplo} 24`}
                 value={humedadManual.arriba}
                 onChange={(e) => onCambiarHumedadManual?.("arriba", e.target.value)}
                 style={control}
               />
             </Campo>
-            <Campo etiqueta={textos.humedadProfunda || "Humedad profunda (%)"}>
+            <Campo etiqueta={t.humedadProfunda} ayuda={t.ayudaProfunda}>
               <input
                 type="number"
                 step="0.1"
-                placeholder="Ej: 22"
+                placeholder={`${t.ejemplo} 22`}
                 value={humedadManual.abajo}
                 onChange={(e) => onCambiarHumedadManual?.("abajo", e.target.value)}
                 style={control}
@@ -167,7 +171,7 @@ export function LoteView({
         </div>
       )}
 
-      {/* Botones de Acción: Siembra y Cosecha */}
+      {/* Botones de Acción: Siembra y Cosecha (el emoji ya viene en el texto) */}
       <div style={{ display: "flex", gap: "12px", marginBottom: "18px" }}>
         <button
           type="button"
@@ -175,7 +179,7 @@ export function LoteView({
           disabled={cargando}
           style={{ ...botonAccion, backgroundColor: "#2e7d32" }}
         >
-          🌱 {textos.btnSembrar || "¿Se puede Sembrar?"}
+          {t.btnSembrar}
         </button>
 
         <button
@@ -184,13 +188,13 @@ export function LoteView({
           disabled={cargando}
           style={{ ...botonAccion, backgroundColor: "#1565c0" }}
         >
-          🚜 {textos.btnCosechar || "¿Se puede Cosechar?"}
+          {t.btnCosechar}
         </button>
       </div>
 
       {cargando && (
         <p style={{ textAlign: "center", fontSize: "16px", marginTop: "12px" }}>
-          {textos.consultando || "Consultando datos de tu ubicación..."}
+          {t.cargando}
         </p>
       )}
 
@@ -207,7 +211,7 @@ export function LoteView({
             marginTop: "16px",
             padding: "18px",
             borderRadius: "12px",
-            backgroundColor: diagnostico.color || colorPorTipo(diagnostico.semaforo),
+            backgroundColor: diagnostico.color || colorPorTipo(diagnostico.semaforo || diagnostico.tipo),
             color: "white",
             textAlign: "left",
           }}
@@ -263,13 +267,13 @@ export function LoteView({
             </BloqueResultado>
           )}
 
-          {fuentesLimpias?.length > 0 && (
+          {fuentesLimpias.length > 0 && (
             <BloqueResultado titulo={t.fuentesUtilizadas}>
               <p style={parrafoDetalle}>{fuentesLimpias.join(" + ")}</p>
             </BloqueResultado>
           )}
 
-          {advertenciasLimpias?.length > 0 && (
+          {advertenciasLimpias.length > 0 && (
             <BloqueResultado titulo={t.advertencias}>
               <ul style={{ margin: 0, paddingLeft: "20px" }}>
                 {advertenciasLimpias.map((advertencia, indice) => (
@@ -311,13 +315,15 @@ export function LoteView({
               cursor: "pointer",
             }}
           >
-            🔊 {textos.btnEscuchar || "Escuchar recomendación"}
+            {t.escuchar}
           </button>
         </div>
       )}
 
-      {/* NUEVO MÓDULO: Rotación de Cultivo y Aproximación de Desgaste */}
+      {/* Rotación de Cultivo y Aproximación de Desgaste */}
       <RotacionView
+        idioma={idioma}
+        textos={t}
         cultivoAnterior={cultivoAnterior}
         onCambiarCultivoAnterior={onCambiarCultivoAnterior}
         evaluacionRotacion={evaluacionRotacion}
@@ -333,62 +339,10 @@ function normalizarFuente(fuente, idioma = "es") {
   if (texto.includes("CONAE") || texto.includes("OPEN-METEO")) {
     return "OpenWeather";
   }
-  if (idioma === "en" && texto.includes("MANUAL")) {
-    return "Manual / Field sensor";
+  if (texto.includes("MANUAL")) {
+    return idioma === "en" ? "Manual / Field sensor" : "Medición manual / Sensor de campo";
   }
   return fuente;
-}
-
-function traducirContextoClimatico(texto, idioma = "es") {
-  if (!texto) {
-    return idioma === "en"
-      ? "NASA POWER did not return historical information for the current month."
-      : "NASA POWER no devolvió información histórica para el mes actual.";
-  }
-
-  if (idioma !== "en") {
-    return texto;
-  }
-
-  const meses = {
-    Enero: "January",
-    Febrero: "February",
-    Marzo: "March",
-    Abril: "April",
-    Mayo: "May",
-    Junio: "June",
-    Julio: "July",
-    Agosto: "August",
-    Septiembre: "September",
-    Octubre: "October",
-    Noviembre: "November",
-    Diciembre: "December",
-  };
-
-  let traducido = String(texto);
-
-  Object.entries(meses).forEach(([mesEs, mesEn]) => {
-    traducido = traducido.replace(new RegExp(`\\b${mesEs}\\b`, "g"), mesEn);
-  });
-
-  const reemplazos = [
-    ["NASA POWER no devolvió un resumen para el mes actual.", "NASA POWER did not return a summary for the current month."],
-    ["NASA POWER no devolvió información histórica para el mes actual.", "NASA POWER did not return historical information for the current month."],
-    ["precipitación media no disponible", "average precipitation unavailable"],
-    ["temperatura máxima media no disponible", "average maximum temperature unavailable"],
-    ["mm de precipitación media", "mm of average precipitation"],
-    ["°C de temperatura máxima media", "°C average maximum temperature"],
-    ["°C de máxima media", "°C average maximum temperature"],
-    ["La mayor racha seca del período fue de", "The longest dry spell in the period was"],
-    ["días.", "days."],
-    [" y ", " and "],
-  ];
-
-  reemplazos.forEach(([es, en]) => {
-    traducido = traducido.split(es).join(en);
-  });
-
-  return traducido;
 }
 
 function extraerPorcentajesDeMensaje(mensaje = "") {
@@ -425,8 +379,8 @@ function BloqueResultado({ titulo, children }) {
   );
 }
 
-function formatearPorcentaje(valor) {
-  return Number.isFinite(valor) ? `${valor.toFixed(1)} %` : "No disponible";
+function formatearPorcentaje(valor, noDisponible = "No disponible") {
+  return Number.isFinite(valor) ? `${valor.toFixed(1)} %` : noDisponible;
 }
 
 function colorPorTipo(tipo) {
