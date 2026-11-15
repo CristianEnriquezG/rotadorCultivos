@@ -1,9 +1,10 @@
 import { MapaSelector } from "./mapaSelector";
-import { TEXTOS, traducirTextoDinamico } from "../Model/textosIdioma";
+import { traducirTextoDinamico } from "../Model/textosIdioma";
+import { RotacionView } from "./rotacionView";
 
 export function LoteView({
   idioma = "es",
-  textos = TEXTOS.es,
+  textos = {},
   onVolverLanding,
   ubicacion,
   ubicacionNoDeterminada,
@@ -19,404 +20,214 @@ export function LoteView({
   usarHumedadManual,
   humedadManual = { arriba: "", abajo: "", fecha: "", metodo: "sensor" },
   onCambiarHumedadManual,
+  cultivoAnterior,
+  onCambiarCultivoAnterior,
+  evaluacionRotacion,
+  onEscucharRotacion,
 }) {
-  const t = textos || TEXTOS[idioma] || TEXTOS.es;
+  const tituloTraducido = diagnostico
+    ? traducirTextoDinamico(diagnostico.titulo, idioma)
+    : "";
+  const mensajeTraducido = diagnostico
+    ? traducirTextoDinamico(diagnostico.mensaje, idioma)
+    : "";
 
-  const fuentesLimpias = Array.from(
-    new Set([
-      "OpenWeather",
-      ...(diagnostico?.fuentes || []).map((f) => normalizarFuente(f, idioma)),
-    ])
-  );
-
-  const advertenciasLimpias = diagnostico?.advertencias?.filter(
-    (a) => !a.toUpperCase().includes("CONAE")
-  );
+  const extraidos = extraerPorcentajesDeMensaje(diagnostico?.mensaje);
+  const humedadArriba =
+    diagnostico?.humedadUtilizada?.arriba ??
+    diagnostico?.metricas?.humSuperficial ??
+    extraidos.arriba;
+  const humedadAbajo =
+    diagnostico?.humedadUtilizada?.abajo ??
+    diagnostico?.metricas?.humProfunda ??
+    extraidos.abajo;
 
   return (
-    <div>
-      {/* Barra superior para volver al LandingView */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "16px",
-          padding: "8px 12px",
-          backgroundColor: "#eef2f6",
-          borderRadius: "8px",
-        }}
-      >
-        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>
-          {t.modoActual}{" "}
-          {usarHumedadManual
-            ? t.modoInstrumentosCorto
-            : t.modoAproximadaCorto}
-        </span>
-
-        {onVolverLanding && (
-          <button
-            type="button"
-            onClick={onVolverLanding}
-            style={{
-              padding: "6px 10px",
-              fontSize: "12px",
-              fontWeight: "bold",
-              borderRadius: "6px",
-              border: "1px solid #bbb",
-              backgroundColor: "white",
-              color: "#111",
-              cursor: "pointer",
-            }}
-          >
-            {t.cambiarModo}
-          </button>
-        )}
-      </div>
-
-      {ubicacion && !ubicacionNoDeterminada && (
-        <div
+    <div style={{ width: "100%", fontFamily: "sans-serif" }}>
+      {/* Botón para volver al inicio */}
+      {onVolverLanding && (
+        <button
+          type="button"
+          onClick={onVolverLanding}
           style={{
-            marginBottom: "16px",
-            padding: "14px 16px",
-            borderRadius: "10px",
-            backgroundColor: "#f5f5f5",
-            borderLeft: "6px solid #2e7d32",
-            color: "#111111",
-            textAlign: "left",
+            marginBottom: "14px",
+            padding: "8px 14px",
+            fontSize: "13px",
+            fontWeight: "bold",
+            borderRadius: "8px",
+            border: "1px solid #cbd5e1",
+            backgroundColor: "#ffffff",
+            color: "#1e293b",
+            cursor: "pointer",
           }}
         >
-          <div style={{ fontSize: "18px", fontWeight: "bold" }}>
-            📍 {ubicacion.nombreCorto}
-          </div>
+          ⬅ {textos.volverInicio || (idioma === "en" ? "Back to mode selection" : "Cambiar modo de medición")}
+        </button>
+      )}
 
+      {/* Tarjeta de Ubicación */}
+      <div
+        style={{
+          marginBottom: "16px",
+          padding: "14px 16px",
+          borderRadius: "10px",
+          backgroundColor: ubicacionNoDeterminada ? "#fff3e0" : "#f5f5f5",
+          borderLeft: ubicacionNoDeterminada
+            ? "6px solid #ef6c00"
+            : "6px solid #1976d2",
+          color: "#111111",
+          textAlign: "left",
+        }}
+      >
+        <div style={{ fontSize: "17px", fontWeight: "bold" }}>
+          📍{" "}
+          {ubicacion
+            ? ubicacion.nombreCorto
+            : ubicacionNoDeterminada
+            ? textos.ubicacionNoDeterminada || "Ubicación no determinada"
+            : textos.detectandoGPS || "Detectando tu ubicación GPS..."}
+        </div>
+
+        {ubicacion && (
           <div style={{ fontSize: "13px", color: "#444", marginTop: "4px" }}>
-            {t.coordenadas}: {ubicacion.lat}, {ubicacion.lon}
+            {textos.coordenadas || "Coordenadas"}: {ubicacion.lat}, {ubicacion.lon}
           </div>
+        )}
 
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {onToggleMapa && (
             <button
               type="button"
               onClick={() => onToggleMapa(!mostrarMapa)}
               style={botonUbicacion}
             >
-              {mostrarMapa ? t.cerrarMapa : t.cambiarUbicacionMapa}
+              🗺️ {mostrarMapa ? (textos.ocultarMapa || "Ocultar mapa") : (textos.elegirEnMapa || "Elegir lote en el mapa")}
+            </button>
+          )}
+          {onReintentarGPS && (
+            <button
+              type="button"
+              onClick={onReintentarGPS}
+              style={{ ...botonUbicacion, backgroundColor: "#455a64" }}
+            >
+              📡 {textos.usarGPS || "Usar mi GPS"}
             </button>
           )}
         </div>
+      </div>
+
+      {/* Selector de Mapa */}
+      {mostrarMapa && (
+        <div style={{ marginBottom: "16px" }}>
+          <MapaSelector
+            coordenadasActuales={ubicacion}
+            onSeleccionarPunto={onSeleccionarPuntoMapa}
+          />
+        </div>
       )}
 
-      {ubicacionNoDeterminada && (
+      {/* Formulario de Medición con Instrumentos (si eligió el botón derecho en el Landing) */}
+      {usarHumedadManual && (
         <div
           style={{
             marginBottom: "16px",
-            padding: "14px 16px",
+            padding: "14px",
             borderRadius: "10px",
-            backgroundColor: "#fff3e0",
-            borderLeft: "6px solid #e65100",
-            color: "#bf360c",
+            backgroundColor: "#eef2f6",
+            border: "1px solid #cbd5e1",
+            color: "#111",
             textAlign: "left",
           }}
         >
-          <div style={{ fontSize: "17px", fontWeight: "bold" }}>
-            {t.ubicacionNoDeterminada}
-          </div>
-
-          <div style={{ fontSize: "14px", color: "#333", marginTop: "4px" }}>
-            {t.ubicacionNoDeterminadaDesc}
-          </div>
-
-          <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-            {onToggleMapa && (
-              <button
-                type="button"
-                onClick={() => onToggleMapa(true)}
-                style={{
-                  ...botonUbicacion,
-                  marginTop: 0,
-                  backgroundColor: "#e65100",
-                }}
-              >
-                {t.seleccionarEnMapa}
-              </button>
-            )}
-
-            {onReintentarGPS && (
-              <button
-                type="button"
-                onClick={onReintentarGPS}
-                style={{
-                  padding: "8px 12px",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  borderRadius: "6px",
-                  backgroundColor: "#eeeeee",
-                  color: "#111",
-                  border: "1px solid #bbb",
-                  cursor: "pointer",
-                }}
-              >
-                {t.reintentarGPS}
-              </button>
-            )}
+          <h3 style={{ margin: "0 0 10px", fontSize: "16px", color: "#1565c0" }}>
+            📟 {textos.medicionInstrumentos || "Medición con instrumentos"}
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <Campo etiqueta={textos.humedadSuperficial || "Humedad superficial (%)"}>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Ej: 24"
+                value={humedadManual.arriba}
+                onChange={(e) => onCambiarHumedadManual?.("arriba", e.target.value)}
+                style={control}
+              />
+            </Campo>
+            <Campo etiqueta={textos.humedadProfunda || "Humedad profunda (%)"}>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Ej: 22"
+                value={humedadManual.abajo}
+                onChange={(e) => onCambiarHumedadManual?.("abajo", e.target.value)}
+                style={control}
+              />
+            </Campo>
           </div>
         </div>
       )}
 
-      {mostrarMapa && (
-        <MapaSelector onSeleccionarPunto={onSeleccionarPuntoMapa} />
-      )}
-
-      {usarHumedadManual && (
-        <section
-          style={{
-            marginBottom: "18px",
-            padding: "16px",
-            borderRadius: "10px",
-            backgroundColor: "#f5f7fa",
-            color: "#111",
-            border: "1px solid #d8dee6",
-            textAlign: "left",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              marginBottom: "6px",
-            }}
-          >
-            {t.tituloInstrumentos}
-          </div>
-
-          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#555" }}>
-            {t.descInstrumentos}
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "12px",
-            }}
-          >
-            <Campo etiqueta={t.humedadSuperficial} ayuda={t.ayudaSuperficial}>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={humedadManual?.arriba ?? ""}
-                onChange={(e) =>
-                  onCambiarHumedadManual?.("arriba", e.target.value)
-                }
-                style={control}
-                required
-              />
-            </Campo>
-
-            <Campo etiqueta={t.humedadProfunda} ayuda={t.ayudaProfunda}>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={humedadManual?.abajo ?? ""}
-                onChange={(e) =>
-                  onCambiarHumedadManual?.("abajo", e.target.value)
-                }
-                style={control}
-                required
-              />
-            </Campo>
-
-            <Campo etiqueta={t.fechaHora}>
-              <input
-                type="datetime-local"
-                value={humedadManual?.fecha ?? ""}
-                onChange={(e) =>
-                  onCambiarHumedadManual?.("fecha", e.target.value)
-                }
-                style={control}
-              />
-            </Campo>
-
-            <Campo etiqueta={t.metodoUtilizado}>
-              <select
-                value={humedadManual?.metodo ?? "sensor"}
-                onChange={(e) =>
-                  onCambiarHumedadManual?.("metodo", e.target.value)
-                }
-                style={control}
-              >
-                <option value="sensor">{t.metodoSensor}</option>
-                <option value="gravimetrico">{t.metodoGravimetrico}</option>
-                <option value="estimacion">{t.metodoEstimacion}</option>
-              </select>
-            </Campo>
-          </div>
-        </section>
-      )}
-
+      {/* Botones de Acción: Siembra y Cosecha */}
       <div style={{ display: "flex", gap: "12px", marginBottom: "18px" }}>
         <button
           type="button"
           onClick={() => onAnalizar?.("SIEMBRA")}
           disabled={cargando}
-          style={{
-            ...botonAccion,
-            backgroundColor: "#2e7d32",
-            opacity: cargando ? 0.6 : 1,
-          }}
+          style={{ ...botonAccion, backgroundColor: "#2e7d32" }}
         >
-          {t.btnSembrar}
+          🌱 {textos.btnSembrar || "¿Se puede Sembrar?"}
         </button>
 
         <button
           type="button"
           onClick={() => onAnalizar?.("COSECHA")}
           disabled={cargando}
-          style={{
-            ...botonAccion,
-            backgroundColor: "#1565c0",
-            opacity: cargando ? 0.6 : 1,
-          }}
+          style={{ ...botonAccion, backgroundColor: "#1565c0" }}
         >
-          {t.btnCosechar}
+          🚜 {textos.btnCosechar || "¿Se puede Cosechar?"}
         </button>
       </div>
 
       {cargando && (
-        <p style={{ textAlign: "center", fontSize: "18px", marginTop: "16px" }}>
-          {t.cargando}
+        <p style={{ textAlign: "center", fontSize: "16px", marginTop: "12px" }}>
+          {textos.consultando || "Consultando datos de tu ubicación..."}
         </p>
       )}
 
       {error && (
-        <p
-          role="alert"
-          style={{
-            color: "#ff6b6b",
-            fontSize: "16px",
-            marginTop: "12px",
-            textAlign: "center",
-          }}
-        >
+        <p style={{ color: "#d32f2f", fontSize: "15px", marginTop: "12px", textAlign: "center", fontWeight: "bold" }}>
           ⚠️ {traducirTextoDinamico(error, idioma)}
         </p>
       )}
 
+      {/* Resultado del Semáforo de Siembra / Cosecha */}
       {diagnostico && !cargando && (
         <div
           style={{
             marginTop: "16px",
-            padding: "20px",
+            padding: "18px",
             borderRadius: "12px",
-            backgroundColor:
-              diagnostico.color || colorPorTipo(diagnostico.tipo),
+            backgroundColor: diagnostico.color || colorPorTipo(diagnostico.semaforo),
             color: "white",
             textAlign: "left",
           }}
         >
-          <span
-            style={{
-              display: "inline-block",
-              padding: "4px 10px",
-              backgroundColor: "rgba(0,0,0,0.25)",
-              borderRadius: "6px",
-              fontSize: "13px",
-              fontWeight: "bold",
-              marginBottom: "8px",
-            }}
-          >
-            {t.modoEtiqueta} {diagnostico.tipo}
-          </span>
-
-          <h2 style={{ margin: "0 0 10px", fontSize: "22px" }}>
-            {traducirTextoDinamico(diagnostico.titulo, idioma)}
-          </h2>
-
-          <p style={{ fontSize: "18px", lineHeight: 1.4 }}>
-            {traducirTextoDinamico(diagnostico.mensaje, idioma)}
+          <h2 style={{ margin: "0 0 8px 0", fontSize: "21px" }}>{tituloTraducido}</h2>
+          <p style={{ fontSize: "16px", lineHeight: 1.4, margin: "0 0 12px" }}>
+            {mensajeTraducido}
           </p>
 
-          {diagnostico.humedadUtilizada && (
-            <BloqueResultado titulo={t.humedadUtilizada}>
-              <p style={parrafoDetalle}>
-                {t.superficial}:{" "}
-                {formatearPorcentaje(
-                  diagnostico.humedadUtilizada.arriba ??
-                    extraerPorcentajesDeMensaje(diagnostico.mensaje).arriba,
-                  t.noDisponible
-                )}
-              </p>
-              <p style={parrafoDetalle}>
-                {t.profunda}:{" "}
-                {formatearPorcentaje(
-                  diagnostico.humedadUtilizada.abajo ??
-                    extraerPorcentajesDeMensaje(diagnostico.mensaje).abajo,
-                  t.noDisponible
-                )}
-              </p>
-              <p style={parrafoDetalle}>
-                {t.fuente}:{" "}
-                {normalizarFuente(diagnostico.humedadUtilizada.fuente, idioma)}
-              </p>
-            </BloqueResultado>
-          )}
-
-          {diagnostico.contextoClimatico && (
-            <BloqueResultado titulo={t.contextoClimatico}>
-              <p style={parrafoDetalle}>
-                {traducirTextoDinamico(
-                  diagnostico.contextoClimatico.explicacion,
-                  idioma
-                )}
-              </p>
-              {diagnostico.contextoClimatico.periodo && (
-                <p style={parrafoDetalle}>
-                  {t.periodo}: {diagnostico.contextoClimatico.periodo}
-                </p>
-              )}
-              {diagnostico.contextoClimatico.fuente && (
-                <p style={parrafoDetalle}>
-                  {t.fuente}: {diagnostico.contextoClimatico.fuente}
-                </p>
-              )}
-            </BloqueResultado>
-          )}
-
-          {fuentesLimpias?.length > 0 && (
-            <BloqueResultado titulo={t.fuentesUtilizadas}>
-              <p style={parrafoDetalle}>{fuentesLimpias.join(" + ")}</p>
-            </BloqueResultado>
-          )}
-
-          {advertenciasLimpias?.length > 0 && (
-            <BloqueResultado titulo={t.advertencias}>
-              <ul style={{ margin: 0, paddingLeft: "20px" }}>
-                {advertenciasLimpias.map((advertencia, indice) => (
-                  <li
-                    key={`${advertencia}-${indice}`}
-                    style={{ marginBottom: "6px" }}
-                  >
-                    {traducirTextoDinamico(advertencia, idioma)}
-                  </li>
-                ))}
-              </ul>
-            </BloqueResultado>
-          )}
-
-          <p
-            style={{
-              margin: "14px 0 0",
-              fontSize: "12px",
-              lineHeight: 1.4,
-              opacity: 0.9,
-            }}
-          >
-            {t.notaOrientativa}
-          </p>
+          <BloqueResultado titulo={textos.humedadUtilizadaTitulo || "Humedad utilizada"}>
+            <p style={parrafoDetalle}>
+              • {textos.superficial || "Superficial (0-1 cm)"}: <strong>{formatearPorcentaje(humedadArriba)}</strong>
+            </p>
+            <p style={parrafoDetalle}>
+              • {textos.profunda || "Profunda (9-27 cm)"}: <strong>{formatearPorcentaje(humedadAbajo)}</strong>
+            </p>
+            <p style={parrafoDetalle}>
+              • {textos.fuente || "Fuente"}: <strong>{usarHumedadManual ? "Instrumentos en lote" : "OpenWeather + Open-Meteo"}</strong>
+            </p>
+          </BloqueResultado>
 
           <button
             type="button"
@@ -424,8 +235,8 @@ export function LoteView({
             style={{
               marginTop: "14px",
               width: "100%",
-              padding: "14px",
-              fontSize: "18px",
+              padding: "12px",
+              fontSize: "16px",
               fontWeight: "bold",
               borderRadius: "8px",
               border: "none",
@@ -434,24 +245,20 @@ export function LoteView({
               cursor: "pointer",
             }}
           >
-            {t.escuchar}
+            🔊 {textos.btnEscuchar || "Escuchar recomendación"}
           </button>
         </div>
       )}
+
+      {/* NUEVO MÓDULO: Rotación de Cultivo y Aproximación de Desgaste */}
+      <RotacionView
+        cultivoAnterior={cultivoAnterior}
+        onCambiarCultivoAnterior={onCambiarCultivoAnterior}
+        evaluacionRotacion={evaluacionRotacion}
+        onEscucharRotacion={onEscucharRotacion}
+      />
     </div>
   );
-}
-
-function normalizarFuente(fuente, idioma = "es") {
-  if (!fuente) return "OpenWeather";
-  const texto = String(fuente).toUpperCase();
-  if (texto.includes("CONAE") || texto.includes("OPEN-METEO")) {
-    return "OpenWeather";
-  }
-  if (idioma === "en" && texto.includes("MANUAL")) {
-    return "Manual / Field sensor";
-  }
-  return fuente;
 }
 
 function extraerPorcentajesDeMensaje(mensaje = "") {
@@ -465,7 +272,7 @@ function extraerPorcentajesDeMensaje(mensaje = "") {
 function Campo({ etiqueta, ayuda, children }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-      <span style={{ fontSize: "14px", fontWeight: "bold" }}>{etiqueta}</span>
+      <span style={{ fontSize: "13px", fontWeight: "bold" }}>{etiqueta}</span>
       {children}
       {ayuda && <span style={{ fontSize: "11px", color: "#666" }}>{ayuda}</span>}
     </label>
@@ -476,33 +283,32 @@ function BloqueResultado({ titulo, children }) {
   return (
     <div
       style={{
-        marginTop: "12px",
-        padding: "12px",
+        marginTop: "10px",
+        padding: "10px 12px",
         borderRadius: "8px",
         backgroundColor: "rgba(0,0,0,0.18)",
       }}
     >
-      <h3 style={{ margin: "0 0 8px", fontSize: "16px" }}>{titulo}</h3>
+      <h3 style={{ margin: "0 0 6px", fontSize: "15px" }}>{titulo}</h3>
       {children}
     </div>
   );
 }
 
-function formatearPorcentaje(valor, textoNoDisponible = "No disponible") {
-  return Number.isFinite(valor) ? `${valor.toFixed(1)} %` : textoNoDisponible;
+function formatearPorcentaje(valor) {
+  return Number.isFinite(valor) ? `${valor.toFixed(1)} %` : "No disponible";
 }
 
 function colorPorTipo(tipo) {
-  if (tipo === "FAVORABLE") return "#2e7d32";
-  if (tipo === "HUMEDO") return "#ef6c00";
-  if (tipo === "SIN_DATOS") return "#546e7a";
+  if (tipo === "FAVORABLE" || tipo === "VERDE") return "#2e7d32";
+  if (tipo === "HUMEDO" || tipo === "AMARILLO") return "#ef6c00";
   return "#d32f2f";
 }
 
 const botonUbicacion = {
   marginTop: "10px",
   padding: "8px 12px",
-  fontSize: "14px",
+  fontSize: "13px",
   fontWeight: "bold",
   borderRadius: "6px",
   backgroundColor: "#1976d2",
@@ -513,8 +319,8 @@ const botonUbicacion = {
 
 const botonAccion = {
   flex: 1,
-  padding: "18px 10px",
-  fontSize: "18px",
+  padding: "16px 10px",
+  fontSize: "17px",
   fontWeight: "bold",
   borderRadius: "10px",
   color: "white",
@@ -525,7 +331,7 @@ const botonAccion = {
 const control = {
   width: "100%",
   boxSizing: "border-box",
-  padding: "9px 10px",
+  padding: "8px 10px",
   borderRadius: "6px",
   border: "1px solid #aeb7c2",
   backgroundColor: "white",
@@ -534,6 +340,6 @@ const control = {
 
 const parrafoDetalle = {
   margin: "4px 0",
-  fontSize: "14px",
+  fontSize: "13px",
   lineHeight: 1.4,
 };

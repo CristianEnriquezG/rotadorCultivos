@@ -1,4 +1,4 @@
-export function LayoutApp({ idioma = "es", onCambiarIdioma, textos = {}, children }) {
+export function LayoutApp({ idioma = "en", onCambiarIdioma, textos = {}, children }) {
   return (
     <div
       style={{
@@ -70,7 +70,7 @@ export function LayoutApp({ idioma = "es", onCambiarIdioma, textos = {}, childre
           📡 Agro Radar
         </h1>
         <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-          {textos.subtituloApp || "Asistente de Monitoreo y Decisión de Campo"}
+          {textos.subtituloApp || "Field Monitoring & Decision Assistant"}
         </p>
       </header>
 
@@ -97,7 +97,7 @@ export function LayoutApp({ idioma = "es", onCambiarIdioma, textos = {}, childre
         }}
       >
         <div style={{ fontWeight: "bold", color: "#222" }}>
-          {textos.hechoPor || "Hecho por Equipo Tres Estrellas ⭐⭐⭐"}
+          {textos.hechoPor || "Made by Team Three Stars ⭐⭐⭐"}
         </div>
         <div>
           Maximiliano Trejo • Nicolás Gauna • Cristian Enríquez • Máximo Varela
