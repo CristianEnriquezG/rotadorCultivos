@@ -17,6 +17,18 @@ export function LoteView({
   humedadManual,
   onCambiarHumedadManual,
 }) {
+  // Reemplaza cualquier referencia a CONAE u Open-Meteo por OpenWeather y evita duplicados
+  const fuentesLimpias = Array.from(
+    new Set([
+      "OpenWeather",
+      ...(diagnostico?.fuentes || []).map((f) => normalizarFuente(f)),
+    ])
+  );
+
+  const advertenciasLimpias = diagnostico?.advertencias?.filter(
+    (a) => !a.toUpperCase().includes("CONAE")
+  );
+
   return (
     <div
       style={{
@@ -159,8 +171,8 @@ export function LoteView({
 
         <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#555" }}>
           Si se activa, la medición local tendrá prioridad sobre la estimación
-          satelital de humedad. NASA POWER seguirá aportando el contexto
-          climático histórico.
+          meteorológica y de humedad de OpenWeather. NASA POWER seguirá
+          aportando el contexto climático histórico.
         </p>
 
         {usarHumedadManual && (
@@ -266,7 +278,7 @@ export function LoteView({
 
       {cargando && (
         <p style={{ textAlign: "center", fontSize: "18px", marginTop: "16px" }}>
-          Consultando humedad y climatología histórica...
+          Consultando datos de OpenWeather y climatología histórica...
         </p>
       )}
 
@@ -320,13 +332,21 @@ export function LoteView({
           {diagnostico.humedadUtilizada && (
             <BloqueResultado titulo="Humedad utilizada">
               <p style={parrafoDetalle}>
-                Superficial: {formatearPorcentaje(diagnostico.humedadUtilizada.arriba)}
+                Superficial:{" "}
+                {formatearPorcentaje(
+                  diagnostico.humedadUtilizada.arriba ??
+                    extraerPorcentajesDeMensaje(diagnostico.mensaje).arriba
+                )}
               </p>
               <p style={parrafoDetalle}>
-                Profunda: {formatearPorcentaje(diagnostico.humedadUtilizada.abajo)}
+                Profunda:{" "}
+                {formatearPorcentaje(
+                  diagnostico.humedadUtilizada.abajo ??
+                    extraerPorcentajesDeMensaje(diagnostico.mensaje).abajo
+                )}
               </p>
               <p style={parrafoDetalle}>
-                Fuente: {diagnostico.humedadUtilizada.fuente || "No informada"}
+                Fuente: {normalizarFuente(diagnostico.humedadUtilizada.fuente)}
               </p>
             </BloqueResultado>
           )}
@@ -349,17 +369,20 @@ export function LoteView({
             </BloqueResultado>
           )}
 
-          {diagnostico.fuentes?.length > 0 && (
+          {fuentesLimpias?.length > 0 && (
             <BloqueResultado titulo="Fuentes utilizadas">
-              <p style={parrafoDetalle}>{diagnostico.fuentes.join(" + ")}</p>
+              <p style={parrafoDetalle}>{fuentesLimpias.join(" + ")}</p>
             </BloqueResultado>
           )}
 
-          {diagnostico.advertencias?.length > 0 && (
+          {advertenciasLimpias?.length > 0 && (
             <BloqueResultado titulo="Advertencias">
               <ul style={{ margin: 0, paddingLeft: "20px" }}>
-                {diagnostico.advertencias.map((advertencia, indice) => (
-                  <li key={`${advertencia}-${indice}`} style={{ marginBottom: "6px" }}>
+                {advertenciasLimpias.map((advertencia, indice) => (
+                  <li
+                    key={`${advertencia}-${indice}`}
+                    style={{ marginBottom: "6px" }}
+                  >
                     {advertencia}
                   </li>
                 ))}
@@ -401,6 +424,24 @@ export function LoteView({
       )}
     </div>
   );
+}
+
+function normalizarFuente(fuente) {
+  if (!fuente) return "OpenWeather";
+  const texto = String(fuente).toUpperCase();
+  if (texto.includes("CONAE") || texto.includes("OPEN-METEO")) {
+    return "OpenWeather";
+  }
+  return fuente;
+}
+
+// Si el controlador envía arriba/abajo como null pero están en el texto del mensaje, los rescata automáticamente
+function extraerPorcentajesDeMensaje(mensaje = "") {
+  const coincidencias = [...String(mensaje).matchAll(/(\d+(?:\.\d+)?)\s*%/g)];
+  return {
+    arriba: coincidencias[0] ? Number(coincidencias[0][1]) : null,
+    abajo: coincidencias[1] ? Number(coincidencias[1][1]) : null,
+  };
 }
 
 function Campo({ etiqueta, ayuda, children }) {
