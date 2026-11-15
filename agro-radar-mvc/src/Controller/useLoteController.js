@@ -463,7 +463,7 @@ function evaluarHumedadManual(medicion, modo) {
   return {
     tipo: "HUMEDO",
     semaforo: "AMARILLO",
-    color: "#ef6c00",
+    color: "#b45309",
     titulo:
       modo === "COSECHA"
         ? "Humedad elevada: posponer la cosecha"

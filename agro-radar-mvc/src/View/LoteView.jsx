@@ -211,12 +211,12 @@ export function LoteView({
             marginTop: "16px",
             padding: "18px",
             borderRadius: "12px",
-            backgroundColor: diagnostico.color || colorPorTipo(diagnostico.semaforo || diagnostico.tipo),
+            backgroundColor: colorPorTipo(diagnostico.semaforo || diagnostico.tipo),
             color: "white",
             textAlign: "left",
           }}
         >
-          <h2 style={{ margin: "0 0 8px 0", fontSize: "21px" }}>{tituloTraducido}</h2>
+          <h2 style={{ margin: "0 0 8px 0", fontSize: "21px", color: "#ffffff" }}>{tituloTraducido}</h2>
           <p style={{ fontSize: "16px", lineHeight: 1.4, margin: "0 0 12px" }}>
             {mensajeTraducido}
           </p>
@@ -293,7 +293,7 @@ export function LoteView({
               margin: "14px 0 0",
               fontSize: "12px",
               lineHeight: 1.4,
-              opacity: 0.9,
+              color: "#ffffff",
             }}
           >
             {t.notaOrientativa}
@@ -370,10 +370,11 @@ function BloqueResultado({ titulo, children }) {
         marginTop: "10px",
         padding: "10px 12px",
         borderRadius: "8px",
-        backgroundColor: "rgba(0,0,0,0.18)",
+        backgroundColor: "#ffffff",
+        color: "#1e293b",
       }}
     >
-      <h3 style={{ margin: "0 0 6px", fontSize: "15px" }}>{titulo}</h3>
+      <h3 style={{ margin: "0 0 6px", fontSize: "15px", color: "#0f172a" }}>{titulo}</h3>
       {children}
     </div>
   );
@@ -385,7 +386,7 @@ function formatearPorcentaje(valor, noDisponible = "No disponible") {
 
 function colorPorTipo(tipo) {
   if (tipo === "FAVORABLE" || tipo === "VERDE") return "#2e7d32";
-  if (tipo === "HUMEDO" || tipo === "AMARILLO") return "#ef6c00";
+  if (tipo === "HUMEDO" || tipo === "AMARILLO") return "#b45309";
   return "#d32f2f";
 }
 
@@ -426,4 +427,5 @@ const parrafoDetalle = {
   margin: "4px 0",
   fontSize: "13px",
   lineHeight: 1.4,
+  color: "#1e293b",
 };
