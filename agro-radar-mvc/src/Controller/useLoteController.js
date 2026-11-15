@@ -409,7 +409,7 @@ function evaluarHumedadManual(medicion, modo) {
 
 function construirExplicacionClimatica(climaMes, resumen) {
   if (!climaMes) {
-    return "NASA POWER no devolvió un resumen para el mes actual.";
+    return "NASA POWER no devolvió información histórica para el mes actual.";
   }
 
   const lluvia = Number.isFinite(climaMes.precipitacionMediaMensualMm)
@@ -417,7 +417,7 @@ function construirExplicacionClimatica(climaMes, resumen) {
     : "precipitación media no disponible";
 
   const temperatura = Number.isFinite(climaMes.temperaturaMaximaMediaC)
-    ? `${climaMes.temperaturaMaximaMediaC.toFixed(1)} °C de máxima media`
+    ? `${climaMes.temperaturaMaximaMediaC.toFixed(1)} °C de temperatura máxima media`
     : "temperatura máxima media no disponible";
 
   const racha = Number.isFinite(resumen?.rachaSecaMaximaDias)

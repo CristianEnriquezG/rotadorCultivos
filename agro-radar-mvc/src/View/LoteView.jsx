@@ -368,7 +368,7 @@ export function LoteView({
           {diagnostico.contextoClimatico && (
             <BloqueResultado titulo={t.contextoClimatico}>
               <p style={parrafoDetalle}>
-                {traducirTextoDinamico(
+                {traducirContextoClimatico(
                   diagnostico.contextoClimatico.explicacion,
                   idioma
                 )}
@@ -452,6 +452,58 @@ function normalizarFuente(fuente, idioma = "es") {
     return "Manual / Field sensor";
   }
   return fuente;
+}
+
+function traducirContextoClimatico(texto, idioma = "es") {
+  if (!texto) {
+    return idioma === "en"
+      ? "NASA POWER did not return historical information for the current month."
+      : "NASA POWER no devolvió información histórica para el mes actual.";
+  }
+
+  if (idioma !== "en") {
+    return texto;
+  }
+
+  const meses = {
+    Enero: "January",
+    Febrero: "February",
+    Marzo: "March",
+    Abril: "April",
+    Mayo: "May",
+    Junio: "June",
+    Julio: "July",
+    Agosto: "August",
+    Septiembre: "September",
+    Octubre: "October",
+    Noviembre: "November",
+    Diciembre: "December",
+  };
+
+  let traducido = String(texto);
+
+  Object.entries(meses).forEach(([mesEs, mesEn]) => {
+    traducido = traducido.replace(new RegExp(`\\b${mesEs}\\b`, "g"), mesEn);
+  });
+
+  const reemplazos = [
+    ["NASA POWER no devolvió un resumen para el mes actual.", "NASA POWER did not return a summary for the current month."],
+    ["NASA POWER no devolvió información histórica para el mes actual.", "NASA POWER did not return historical information for the current month."],
+    ["precipitación media no disponible", "average precipitation unavailable"],
+    ["temperatura máxima media no disponible", "average maximum temperature unavailable"],
+    ["mm de precipitación media", "mm of average precipitation"],
+    ["°C de temperatura máxima media", "°C average maximum temperature"],
+    ["°C de máxima media", "°C average maximum temperature"],
+    ["La mayor racha seca del período fue de", "The longest dry spell in the period was"],
+    ["días.", "days."],
+    [" y ", " and "],
+  ];
+
+  reemplazos.forEach(([es, en]) => {
+    traducido = traducido.split(es).join(en);
+  });
+
+  return traducido;
 }
 
 function extraerPorcentajesDeMensaje(mensaje = "") {
