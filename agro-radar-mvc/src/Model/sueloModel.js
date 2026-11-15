@@ -5,25 +5,39 @@ export class SueloModel {
     );
 
     if (!response.ok) {
-      throw new Error('No se pudo conectar con OpenWeather.');
+      throw new Error('No se pudo conectar con Open-Meteo.');
     }
 
     const data = await response.json();
-    const humSuperficial = +(data.current.soil_moisture_0_to_1cm * 100).toFixed(1);
-    const humProfunda = +(data.current.soil_moisture_9_to_27cm * 100).toFixed(1);
+    const sueloArriba = data?.current?.soil_moisture_0_to_1cm;
+    const sueloAbajo = data?.current?.soil_moisture_9_to_27cm;
+
+    // En algunas zonas (desiertos, hielo, costas) el modelo puede no devolver
+    // humedad de suelo. Un null multiplicado por 100 daría 0 % y la app diría
+    // "suelo seco" por error, así que se informa la falta de datos.
+    if (!Number.isFinite(sueloArriba) || !Number.isFinite(sueloAbajo)) {
+      throw new Error('No hay datos de humedad del suelo para esta ubicación. Usá la medición con instrumentos.');
+    }
+
+    const humSuperficial = +(sueloArriba * 100).toFixed(1);
+    const humProfunda = +(sueloAbajo * 100).toFixed(1);
+    const probabilidades = (data?.hourly?.precipitation_probability ?? [])
+      .slice(0, 12)
+      .filter(Number.isFinite);
 
     return {
       humSuperficial,
       humProfunda,
       humAmbiente: data.current.relative_humidity_2m,
       lluviaActual: data.current.precipitation,
-      probLluviaHoy: Math.max(...data.hourly.precipitation_probability.slice(0, 12)),
+      // Math.max() de una lista vacía da -Infinity: se usa 0 si no hay pronóstico
+      probLluviaHoy: probabilidades.length ? Math.max(...probabilidades) : 0,
       humedadUtilizada: {
         arriba: humSuperficial,
         abajo: humProfunda,
-        fuente: 'OpenWeather',
+        fuente: 'Open-Meteo',
       },
-      fuentes: ['OpenWeather', 'NASA POWER'],
+      fuentes: ['Open-Meteo', 'NASA POWER'],
     };
   }
 

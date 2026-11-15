@@ -2,8 +2,14 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Vista general por defecto: toda la Argentina continental.
-const VISTA_GENERAL = { centro: [-38.4, -63.6], zoom: 4 };
+// Vista general por defecto: el mundo entero (la app es global).
+const VISTA_GENERAL = { centro: [20, 0], zoom: 2 };
+const OPCIONES_MAPA = {
+  minZoom: 2,
+  worldCopyJump: true, // al arrastrar más allá de ±180° vuelve a la copia principal
+  maxBounds: [[-85, -Infinity], [85, Infinity]], // sin límite horizontal, sí vertical
+  maxBoundsViscosity: 1,
+};
 // Zoom al que se acerca el mapa cuando ya hay un lote ubicado.
 const ZOOM_LOTE = 12;
 
@@ -48,8 +54,8 @@ export function MapaSelector({
       Number.isFinite(Number(inicial?.lat)) && Number.isFinite(Number(inicial?.lon));
 
     const map = tieneInicial
-      ? L.map(mapContainerRef.current).setView([Number(inicial.lat), Number(inicial.lon)], ZOOM_LOTE)
-      : L.map(mapContainerRef.current).setView(VISTA_GENERAL.centro, VISTA_GENERAL.zoom);
+      ? L.map(mapContainerRef.current, OPCIONES_MAPA).setView([Number(inicial.lat), Number(inicial.lon)], ZOOM_LOTE)
+      : L.map(mapContainerRef.current, OPCIONES_MAPA).setView(VISTA_GENERAL.centro, VISTA_GENERAL.zoom);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap',
@@ -60,7 +66,9 @@ export function MapaSelector({
     }
 
     map.on('click', (e) => {
-      const { lat, lng } = e.latlng;
+      // Si el mapa se desplazó a otra "vuelta" del mundo, la longitud puede salir
+      // fuera de -180..180 (p. ej. Japón = -220°). wrap() la normaliza.
+      const { lat, lng } = e.latlng.wrap();
       ubicarMarcador(map, lat, lng);
       callbackRef.current?.(lat, lng);
     });

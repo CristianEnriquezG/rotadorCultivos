@@ -25,7 +25,7 @@ export const TEXTOS = {
     instruccionMapa: "👆 Tocá en el mapa el punto exacto donde está tu lote:",
     tituloInstrumentos: "Datos de medición con instrumentos",
     descInstrumentos:
-      "La medición local tiene prioridad sobre la estimación meteorológica de OpenWeather. NASA POWER aporta el contexto climático histórico.",
+      "La medición local tiene prioridad sobre la estimación del modelo meteorológico de Open-Meteo. NASA POWER aporta el contexto climático histórico.",
     humedadSuperficial: "Humedad superficial (%)",
     ayudaSuperficial: "Medición de 0 a 10 cm.",
     humedadProfunda: "Humedad profunda (%)",
@@ -38,7 +38,7 @@ export const TEXTOS = {
     metodoEstimacion: "Estimación manual",
     btnSembrar: "🌱 ¿Se puede sembrar?",
     btnCosechar: "🚜 ¿Se puede cosechar?",
-    cargando: "Consultando datos de OpenWeather y climatología histórica...",
+    cargando: "Consultando datos de Open-Meteo y climatología histórica...",
     modoEtiqueta: "MODO",
     humedadUtilizada: "Humedad utilizada",
     superficial: "Superficial",
@@ -94,7 +94,7 @@ export const TEXTOS = {
     instruccionMapa: "👆 Tap the exact spot on the map where your field is:",
     tituloInstrumentos: "Instrument measurement data",
     descInstrumentos:
-      "Local measurement takes priority over OpenWeather meteorological estimates. NASA POWER provides historical climate context.",
+      "Local measurement takes priority over the Open-Meteo weather model estimate. NASA POWER provides historical climate context.",
     humedadSuperficial: "Surface moisture (%)",
     ayudaSuperficial: "Measurement from 0 to 10 cm.",
     humedadProfunda: "Deep moisture (%)",
@@ -107,7 +107,7 @@ export const TEXTOS = {
     metodoEstimacion: "Manual estimation",
     btnSembrar: "🌱 Can I plant?",
     btnCosechar: "🚜 Can I harvest?",
-    cargando: "Fetching OpenWeather data and historical climatology...",
+    cargando: "Fetching Open-Meteo data and historical climatology...",
     modoEtiqueta: "MODE",
     humedadUtilizada: "Moisture used",
     superficial: "Surface",
@@ -242,7 +242,11 @@ const REEMPLAZOS_EN = [
     "No fue posible obtener la humedad actual del suelo.",
     "Could not obtain the current soil moisture.",
   ],
-  ["No se pudo conectar con OpenWeather.", "Could not connect to OpenWeather."],
+  ["No se pudo conectar con Open-Meteo.", "Could not connect to Open-Meteo."],
+  [
+    "No hay datos de humedad del suelo para esta ubicación. Usá la medición con instrumentos.",
+    "No soil moisture data for this location. Please use instrument measurement.",
+  ],
   [
     "La humedad superficial debe estar entre 0 y 100 %.",
     "Surface moisture must be between 0 and 100 %.",

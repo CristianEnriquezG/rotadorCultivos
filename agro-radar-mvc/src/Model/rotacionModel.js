@@ -131,9 +131,9 @@ const REGLAS_CULTIVOS = {
           "El perfil ya recuperó humedad suficiente para aprovechar la buena estructura física dejada por la secuencia Trigo/Soja.",
       },
       siEstaSeco: {
-        cultivo: "Maíz Tardío (Diciembre) o Sorgo",
+        cultivo: "Maíz Tardío ({siembraTardia}) o Sorgo",
         motivo:
-          "Como el doble cultivo secó el perfil profundo, atrasar la siembra permite recargar agua con las lluvias de primavera.",
+          "Como el doble cultivo secó el perfil profundo, atrasar la siembra permite que las próximas lluvias recarguen el agua del suelo.",
       },
     },
     en: {
@@ -150,9 +150,9 @@ const REGLAS_CULTIVOS = {
           "The profile has already recovered enough moisture to take advantage of the good soil structure left by the Wheat/Soybean sequence.",
       },
       siEstaSeco: {
-        cultivo: "Late Corn (December) or Sorghum",
+        cultivo: "Late Corn ({siembraTardia}) or Sorghum",
         motivo:
-          "Since the double crop dried the deep profile, delaying planting lets spring rains recharge the soil water.",
+          "Since the double crop dried the deep profile, delaying planting lets the upcoming rains recharge the soil water.",
       },
     },
   },
@@ -277,7 +277,7 @@ const REGLAS_CULTIVOS = {
       siEstaSeco: {
         cultivo: "Barbecho ➔ Sorgo o Maíz Tardío",
         motivo:
-          "Conviene acumular lluvias en primavera antes de sembrar para reponer el agua profunda que consumió la alfalfa.",
+          "Conviene acumular las lluvias de la próxima temporada antes de sembrar para reponer el agua profunda que consumió la alfalfa.",
       },
     },
     en: {
@@ -296,7 +296,7 @@ const REGLAS_CULTIVOS = {
       siEstaSeco: {
         cultivo: "Fallow ➔ Sorghum or Late Corn",
         motivo:
-          "Better to store spring rainfall before planting to replenish the deep water used by the alfalfa.",
+          "Better to store the next rainy season's water before planting to replenish the deep water used by the alfalfa.",
       },
     },
   },
@@ -319,6 +319,52 @@ const TEXTOS_CONDICION = {
   },
 };
 
+/**
+ * Devuelve el momento de "siembra tardía" según dónde está el lote.
+ * - Hemisferio sur: diciembre (verano austral).
+ * - Hemisferio norte: junio (verano boreal).
+ * - Zona tropical (|lat| < 23.5°): las estaciones las marcan las lluvias, no el mes.
+ */
+const LIMITE_TROPICO = 23.5;
+
+const SIEMBRA_TARDIA = {
+  sur: { es: "diciembre", en: "December" },
+  norte: { es: "junio", en: "June" },
+  tropical: {
+    es: "unas semanas después del inicio de las lluvias",
+    en: "a few weeks after the rainy season starts",
+  },
+};
+
+export function zonaClimaticaPorLatitud(latitud) {
+  // Number(null) y Number("") dan 0 (el ecuador): sin dato no hay zona
+  if (latitud === null || latitud === undefined || latitud === "") return null;
+  const lat = Number(latitud);
+  if (!Number.isFinite(lat)) return null;
+  if (Math.abs(lat) < LIMITE_TROPICO) return "tropical";
+  return lat < 0 ? "sur" : "norte";
+}
+
+const TEXTOS_ZONA = {
+  es: {
+    tropical:
+      "Lote en zona tropical: las fechas dependen de la temporada de lluvias local más que del mes del año.",
+    sinUbicacion:
+      "Sin ubicación: las fechas de siembra se muestran para el hemisferio sur. Elegí el lote para ajustarlas.",
+  },
+  en: {
+    tropical:
+      "Field in the tropics: planting dates depend on the local rainy season rather than the calendar month.",
+    sinUbicacion:
+      "No location yet: planting dates are shown for the Southern Hemisphere. Pick your field to adjust them.",
+  },
+};
+
+function aplicarEstacion(texto, zona, lang) {
+  const momento = SIEMBRA_TARDIA[zona ?? "sur"][lang];
+  return texto.replaceAll("{siembraTardia}", momento);
+}
+
 export class RotacionModel {
   /**
    * Calcula el desgaste aproximado y la rotación sugerida cruzando
@@ -326,8 +372,14 @@ export class RotacionModel {
    * @param {string} cultivoAnteriorId
    * @param {object|null} diagnosticoSuelo
    * @param {"es"|"en"} idioma
+   * @param {number|null} latitud  latitud del lote, para ajustar fechas al hemisferio
    */
-  static evaluarRotacion(cultivoAnteriorId = "soja", diagnosticoSuelo = null, idioma = "es") {
+  static evaluarRotacion(
+    cultivoAnteriorId = "soja",
+    diagnosticoSuelo = null,
+    idioma = "es",
+    latitud = null,
+  ) {
     const regla = REGLAS_CULTIVOS[cultivoAnteriorId] || REGLAS_CULTIVOS.soja;
     const lang = idioma === "en" ? "en" : "es";
     const txt = regla[lang];
@@ -354,9 +406,23 @@ export class RotacionModel {
       alertaNitrato = cond.alertaNitrato;
     }
 
-    const sugerencia = buenaHumedad
-      ? { ...txt.siHayHumedad, icono: regla.iconoSiHumedad }
-      : { ...txt.siEstaSeco, icono: regla.iconoSiSeco };
+    const zona = zonaClimaticaPorLatitud(latitud);
+    const base = buenaHumedad ? txt.siHayHumedad : txt.siEstaSeco;
+    const sugerencia = {
+      cultivo: aplicarEstacion(base.cultivo, zona, lang),
+      motivo: aplicarEstacion(base.motivo, zona, lang),
+      icono: buenaHumedad ? regla.iconoSiHumedad : regla.iconoSiSeco,
+    };
+
+    // Solo se avisa cuando la recomendación depende de una fecha
+    const dependeDeFecha = (base.cultivo + base.motivo).includes("{siembraTardia}");
+    const notaEstacional = !dependeDeFecha
+      ? null
+      : zona === null
+      ? TEXTOS_ZONA[lang].sinUbicacion
+      : zona === "tropical"
+      ? TEXTOS_ZONA[lang].tropical
+      : null;
 
     const hayMedicion = humProfunda !== null || humSuperficial !== null;
 
@@ -380,6 +446,8 @@ export class RotacionModel {
           : cond.baja
         : cond.estandar,
       recomendacion: sugerencia,
+      zonaClimatica: zona,
+      notaEstacional,
     };
   }
 }

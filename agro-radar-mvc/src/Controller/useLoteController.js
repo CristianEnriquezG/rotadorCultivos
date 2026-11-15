@@ -43,19 +43,27 @@ export function useLoteController({ idioma = "es" } = {}) {
   // Se recalcula cada vez que cambia el cultivo anterior o llega un diagnóstico nuevo
   // (así la recomendación se ajusta a la humedad real medida en el lote).
   const evaluacionRotacion = useMemo(
-    () => RotacionModel.evaluarRotacion(cultivoAnterior, diagnostico, idioma),
-    [cultivoAnterior, diagnostico, idioma],
+    () =>
+      RotacionModel.evaluarRotacion(
+        cultivoAnterior,
+        diagnostico,
+        idioma,
+        coordenadas?.lat ?? null,
+      ),
+    [cultivoAnterior, diagnostico, idioma, coordenadas?.lat],
   );
 
+  // Válida en cualquier lugar del mundo: solo se exige que las coordenadas
+  // existan y que el GPS tenga una precisión razonable (< 50 km).
   const esUbicacionValida = (coords) => {
     const { latitude, longitude, accuracy } = coords;
-    const dentroDeArgentina =
-      latitude <= -21 &&
-      latitude >= -56 &&
-      longitude <= -53 &&
-      longitude >= -74;
+    const coordenadasValidas =
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      Math.abs(latitude) <= 90 &&
+      Math.abs(longitude) <= 180;
 
-    return dentroDeArgentina && accuracy < 50000;
+    return coordenadasValidas && Number.isFinite(accuracy) && accuracy < 50000;
   };
 
   const fijarUbicacion = async (lat, lon) => {
@@ -64,7 +72,7 @@ export function useLoteController({ idioma = "es" } = {}) {
     setUbicacionNoDeterminada(false);
     setError(null);
 
-    const lugar = await ApiGeo.obtenerNombreLugar(lat, lon);
+    const lugar = await ApiGeo.obtenerNombreLugar(lat, lon, idioma);
     if (sesion !== sesionRef.current) return; // llegó tarde: el lote ya se reinició
     setUbicacion(lugar);
   };
@@ -135,6 +143,21 @@ export function useLoteController({ idioma = "es" } = {}) {
 
     detectarGPSNavegador();
   };
+
+  // Al cambiar de idioma, se vuelve a pedir el nombre del lugar en ese idioma
+  // (p. ej. "Japan" / "Japón"). Las coordenadas no cambian.
+  useEffect(() => {
+    if (!coordenadas) return;
+    const sesion = sesionRef.current;
+    let vigente = true;
+    ApiGeo.obtenerNombreLugar(coordenadas.lat, coordenadas.lon, idioma).then((lugar) => {
+      if (vigente && sesion === sesionRef.current) setUbicacion(lugar);
+    });
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idioma]);
 
   // Corta cualquier lectura en curso si el componente se desmonta
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
@@ -440,7 +463,7 @@ function extraerHumedadDiagnostico(diagnostico) {
     diagnostico.datos?.humedadProfunda,
   ]);
 
-  const fuente = diagnostico.humedadUtilizada?.fuente ?? "OpenWeather";
+  const fuente = diagnostico.humedadUtilizada?.fuente ?? "Open-Meteo";
 
   if (arriba === null && abajo === null) {
     return {

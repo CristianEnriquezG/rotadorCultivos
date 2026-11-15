@@ -175,6 +175,22 @@ export function RotacionView({
           {evaluacionRotacion.recomendacion.motivo}
         </p>
 
+        {evaluacionRotacion.notaEstacional && (
+          <p
+            style={{
+              margin: "0 0 12px",
+              padding: "6px 8px",
+              borderRadius: "6px",
+              backgroundColor: "#ffffff",
+              color: "#1e293b",
+              fontSize: "12px",
+              lineHeight: 1.4,
+            }}
+          >
+            🗓️ {evaluacionRotacion.notaEstacional}
+          </p>
+        )}
+
         <button
           type="button"
           onClick={leyendo ? onDetenerAudio : onEscucharRotacion}

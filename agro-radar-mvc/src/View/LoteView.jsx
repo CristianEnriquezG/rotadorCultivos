@@ -362,10 +362,11 @@ export function LoteView({
 }
 
 function normalizarFuente(fuente, idioma = "es") {
-  if (!fuente) return "OpenWeather";
+  if (!fuente) return "Open-Meteo";
   const texto = String(fuente).toUpperCase();
-  if (texto.includes("CONAE") || texto.includes("OPEN-METEO")) {
-    return "OpenWeather";
+  // Datos guardados por versiones anteriores de la app
+  if (texto.includes("CONAE") || texto.includes("OPENWEATHER")) {
+    return "Open-Meteo";
   }
   if (texto.includes("MANUAL")) {
     const metodos = {
