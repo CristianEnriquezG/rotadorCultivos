@@ -1,5 +1,5 @@
-import { useLoteController } from './Controller/useLoteController';
-import { LoteView } from './View/LoteView';
+import { useLoteController } from "./Controller/useLoteController.js";
+import { LoteView } from "./View/LoteView.jsx";
 
 export default function App() {
   const {
@@ -14,6 +14,10 @@ export default function App() {
     seleccionarUbicacionManual,
     analizarLote,
     reproducirAudio,
+    usarHumedadManual,
+    setUsarHumedadManual,
+    humedadManual,
+    actualizarHumedadManual,
   } = useLoteController();
 
   return (
@@ -29,6 +33,10 @@ export default function App() {
       error={error}
       onAnalizar={analizarLote}
       onEscuchar={reproducirAudio}
+      usarHumedadManual={usarHumedadManual}
+      onCambiarUsoHumedadManual={setUsarHumedadManual}
+      humedadManual={humedadManual}
+      onCambiarHumedadManual={actualizarHumedadManual}
     />
   );
 }
