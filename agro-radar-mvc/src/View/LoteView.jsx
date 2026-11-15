@@ -145,9 +145,12 @@ export function LoteView({
             textAlign: "left",
           }}
         >
-          <h3 style={{ margin: "0 0 10px", fontSize: "16px", color: "#1565c0" }}>
-            📟 {t.medicionInstrumentos}
+          <h3 style={{ margin: "0 0 6px", fontSize: "16px", color: "#0f172a" }}>
+            📟 {t.tituloInstrumentos}
           </h3>
+          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#475569", lineHeight: 1.4 }}>
+            {t.descInstrumentos}
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <Campo etiqueta={t.humedadSuperficial} ayuda={t.ayudaSuperficial}>
               <input
@@ -168,6 +171,26 @@ export function LoteView({
                 onChange={(e) => onCambiarHumedadManual?.("abajo", e.target.value)}
                 style={control}
               />
+            </Campo>
+            <Campo etiqueta={t.fechaHora}>
+              <input
+                type="datetime-local"
+                lang={idioma === "en" ? "en-US" : "es-AR"}
+                value={humedadManual.fecha}
+                onChange={(e) => onCambiarHumedadManual?.("fecha", e.target.value)}
+                style={control}
+              />
+            </Campo>
+            <Campo etiqueta={t.metodoUtilizado}>
+              <select
+                value={humedadManual.metodo}
+                onChange={(e) => onCambiarHumedadManual?.("metodo", e.target.value)}
+                style={control}
+              >
+                <option value="sensor">{t.metodoSensor}</option>
+                <option value="gravimetrico">{t.metodoGravimetrico}</option>
+                <option value="estimacion">{t.metodoEstimacion}</option>
+              </select>
             </Campo>
           </div>
         </div>
@@ -345,7 +368,15 @@ function normalizarFuente(fuente, idioma = "es") {
     return "OpenWeather";
   }
   if (texto.includes("MANUAL")) {
-    return idioma === "en" ? "Manual / Field sensor" : "Medición manual / Sensor de campo";
+    const metodos = {
+      SENSOR: { es: "Sensor de humedad", en: "Moisture sensor" },
+      GRAVIMETRICO: { es: "Método gravimétrico", en: "Gravimetric method" },
+      ESTIMACION: { es: "Estimación manual", en: "Manual estimation" },
+    };
+    const clave = Object.keys(metodos).find((m) => texto.includes(m));
+    const lang = idioma === "en" ? "en" : "es";
+    const prefijo = lang === "en" ? "Field measurement" : "Medición a campo";
+    return clave ? `${prefijo} – ${metodos[clave][lang]}` : prefijo;
   }
   return fuente;
 }
