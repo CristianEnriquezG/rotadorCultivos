@@ -74,7 +74,7 @@ export function MapaSelector({
         ref={mapContainerRef}
         style={{
           width: '100%',
-          height: '280px',
+          height: '500px',
           borderRadius: '0 0 10px 10px',
           border: '2px solid #1976d2',
         }}

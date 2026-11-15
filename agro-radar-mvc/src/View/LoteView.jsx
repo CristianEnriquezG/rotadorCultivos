@@ -332,11 +332,11 @@ export function LoteView({
             {t.modoEtiqueta} {diagnostico.tipo}
           </span>
 
-          <h2 style={{ margin: "0 0 10px", fontSize: "22px" }}>
+          <h2 style={{color: "#ffffff", fontSize: "32px", fontWeight: "700",}}>
             {traducirTextoDinamico(diagnostico.titulo, idioma)}
           </h2>
 
-          <p style={{ fontSize: "18px", lineHeight: 1.4 }}>
+          <p style={{ fontSize: "18px", lineHeight: 1.4, color: "#ffffff" }}>
             {traducirTextoDinamico(diagnostico.mensaje, idioma)}
           </p>
 
@@ -535,5 +535,6 @@ const control = {
 const parrafoDetalle = {
   margin: "4px 0",
   fontSize: "14px",
-  lineHeight: 1.4,
+  lineHeight: 1.5,
+  color: "#ffffff",
 };
