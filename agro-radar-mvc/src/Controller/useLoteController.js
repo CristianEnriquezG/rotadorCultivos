@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SueloModel } from "../Model/sueloModel";
 import { RotacionModel } from "../Model/rotacionModel";
 import {
@@ -28,6 +28,15 @@ export function useLoteController({ idioma = "es" } = {}) {
     metodo: "sensor",
   });
 
+  // Audio: qué se está leyendo ("diagnostico" | "rotacion" | null)
+  const [audioActivo, setAudioActivo] = useState(null);
+  const vozActualRef = useRef(null);
+
+  // Cada vez que se reinicia el lote cambia la "sesión". Las respuestas de GPS,
+  // geocodificación o análisis que lleguen de una sesión anterior se descartan,
+  // así una posición vieja nunca pisa a la nueva.
+  const sesionRef = useRef(0);
+
   // --- Rotación de cultivos ---
   const [cultivoAnterior, setCultivoAnterior] = useState("soja");
 
@@ -50,15 +59,19 @@ export function useLoteController({ idioma = "es" } = {}) {
   };
 
   const fijarUbicacion = async (lat, lon) => {
+    const sesion = sesionRef.current;
     setCoordenadas({ lat, lon });
     setUbicacionNoDeterminada(false);
     setError(null);
 
     const lugar = await ApiGeo.obtenerNombreLugar(lat, lon);
+    if (sesion !== sesionRef.current) return; // llegó tarde: el lote ya se reinició
     setUbicacion(lugar);
   };
 
   const detectarGPSNavegador = () => {
+    const sesion = sesionRef.current;
+
     if (!navigator.geolocation) {
       setUbicacionNoDeterminada(true);
       setMostrarMapa(true);
@@ -67,6 +80,8 @@ export function useLoteController({ idioma = "es" } = {}) {
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (sesion !== sesionRef.current) return;
+
         if (esUbicacionValida(pos.coords)) {
           await fijarUbicacion(pos.coords.latitude, pos.coords.longitude);
           setMostrarMapa(false);
@@ -79,6 +94,7 @@ export function useLoteController({ idioma = "es" } = {}) {
         setMostrarMapa(true);
       },
       () => {
+        if (sesion !== sesionRef.current) return;
         setUbicacion(null);
         setCoordenadas(null);
         setUbicacionNoDeterminada(true);
@@ -92,9 +108,36 @@ export function useLoteController({ idioma = "es" } = {}) {
     );
   };
 
-  useEffect(() => {
+  /**
+   * Arranca un lote desde cero: borra la posición, el diagnóstico y la
+   * medición manual anteriores, y vuelve a pedir la ubicación.
+   * Se llama cada vez que el usuario elige "Medición aproximada" o
+   * "Medición con instrumentos" en la pantalla de inicio.
+   */
+  const iniciarNuevoLote = ({ manual = false } = {}) => {
+    sesionRef.current += 1;
+    detenerAudio();
+
+    setUsarHumedadManual(manual);
+    setCoordenadas(null);
+    setUbicacion(null);
+    setUbicacionNoDeterminada(false);
+    setMostrarMapa(false);
+    setDiagnostico(null);
+    setCargando(false);
+    setError(null);
+    setHumedadManual({
+      arriba: "",
+      abajo: "",
+      fecha: fechaLocalParaInput(),
+      metodo: "sensor",
+    });
+
     detectarGPSNavegador();
-  }, []);
+  };
+
+  // Corta cualquier lectura en curso si el componente se desmonta
+  useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
   const seleccionarUbicacionManual = async (lat, lon) => {
     await fijarUbicacion(lat, lon);
@@ -122,6 +165,7 @@ export function useLoteController({ idioma = "es" } = {}) {
       return;
     }
 
+    const sesion = sesionRef.current;
     setCargando(true);
     setError(null);
 
@@ -181,19 +225,42 @@ export function useLoteController({ idioma = "es" } = {}) {
             : null,
       });
 
+      if (sesion !== sesionRef.current) return;
       setDiagnostico(resultadoIntegrado);
     } catch (err) {
+      if (sesion !== sesionRef.current) return;
       setError(err.message);
     } finally {
-      setCargando(false);
+      if (sesion === sesionRef.current) setCargando(false);
     }
   };
 
-  const hablar = (texto) => {
+  const detenerAudio = () => {
+    vozActualRef.current = null;
+    window.speechSynthesis?.cancel();
+    setAudioActivo(null);
+  };
+
+  const hablar = (texto, origen) => {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
+
     const voz = new SpeechSynthesisUtterance(texto);
     voz.lang = idioma === "en" ? "en-US" : "es-AR";
+
+    // Al cancelar una lectura, el navegador dispara "end" de la anterior;
+    // solo se limpia el estado si terminó la lectura que sigue vigente.
+    const alTerminar = () => {
+      if (vozActualRef.current === voz) {
+        vozActualRef.current = null;
+        setAudioActivo(null);
+      }
+    };
+    voz.onend = alTerminar;
+    voz.onerror = alTerminar;
+
+    vozActualRef.current = voz;
+    setAudioActivo(origen);
     window.speechSynthesis.speak(voz);
   };
 
@@ -213,7 +280,7 @@ export function useLoteController({ idioma = "es" } = {}) {
     const titulo = traducirTextoDinamico(diagnostico.titulo, idioma);
     const mensaje = traducirTextoDinamico(diagnostico.mensaje, idioma);
 
-    hablar(`${textoLugar}${titulo}. ${mensaje}${contexto}`);
+    hablar(`${textoLugar}${titulo}. ${mensaje}${contexto}`, "diagnostico");
   };
 
   const reproducirAudioRotacion = () => {
@@ -235,7 +302,7 @@ export function useLoteController({ idioma = "es" } = {}) {
           `${r.condicionHidricaTexto}. ` +
           `Se recomienda sembrar ${r.recomendacion.cultivo}. ${r.recomendacion.motivo}`;
 
-    hablar(texto);
+    hablar(texto, "rotacion");
   };
 
   return {
@@ -259,6 +326,11 @@ export function useLoteController({ idioma = "es" } = {}) {
     cambiarCultivoAnterior,
     evaluacionRotacion,
     reproducirAudioRotacion,
+    // Audio
+    audioActivo,
+    detenerAudio,
+    // Reinicio de lote
+    iniciarNuevoLote,
   };
 }
 

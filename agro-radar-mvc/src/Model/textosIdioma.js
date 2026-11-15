@@ -54,6 +54,7 @@ export const TEXTOS = {
     escuchar: "🔊 Escuchar recomendación",
     hechoPor: "Hecho por Equipo Tres Estrellas ⭐⭐⭐",
     ubicacionAudio: "Ubicación",
+    detenerAudio: "⏹ Detener lectura",
 
     // Rotación de cultivos
     rotacionTitulo: "🔄 Rotación de Cultivo y Desgaste del Lote",
@@ -122,6 +123,7 @@ export const TEXTOS = {
     escuchar: "🔊 Listen to recommendation",
     hechoPor: "Made by Three Stars Team ⭐⭐⭐",
     ubicacionAudio: "Location",
+    detenerAudio: "⏹ Stop reading",
 
     // Crop rotation
     rotacionTitulo: "🔄 Crop Rotation & Field Wear",

@@ -19,16 +19,23 @@ export default function App() {
     document.documentElement.lang = idioma;
   }, [idioma]);
 
+  // Cada vez que se elige un modo se arranca un lote nuevo:
+  // se descarta la posición anterior y se vuelve a pedir la ubicación.
   const irAMedicionAproximada = () => {
     setModoInstrumentos(false);
-    controller.setUsarHumedadManual(false);
+    controller.iniciarNuevoLote({ manual: false });
     setVistaActual("LOTE");
   };
 
   const irAMedicionInstrumentos = () => {
     setModoInstrumentos(true);
-    controller.setUsarHumedadManual(true);
+    controller.iniciarNuevoLote({ manual: true });
     setVistaActual("LOTE");
+  };
+
+  const volverAlInicio = () => {
+    controller.detenerAudio();
+    setVistaActual("LANDING");
   };
 
   return (
@@ -47,7 +54,7 @@ export default function App() {
         <LoteView
           idioma={idioma}
           textos={textos}
-          onVolverLanding={() => setVistaActual("LANDING")}
+          onVolverLanding={volverAlInicio}
           ubicacion={controller.ubicacion}
           ubicacionNoDeterminada={controller.ubicacionNoDeterminada}
           mostrarMapa={controller.mostrarMapa}
@@ -66,6 +73,8 @@ export default function App() {
           onCambiarCultivoAnterior={controller.cambiarCultivoAnterior}
           evaluacionRotacion={controller.evaluacionRotacion}
           onEscucharRotacion={controller.reproducirAudioRotacion}
+          audioActivo={controller.audioActivo}
+          onDetenerAudio={controller.detenerAudio}
         />
       )}
     </LayoutApp>

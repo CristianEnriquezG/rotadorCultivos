@@ -7,6 +7,8 @@ export function RotacionView({
   onCambiarCultivoAnterior,
   evaluacionRotacion,
   onEscucharRotacion,
+  leyendo = false,
+  onDetenerAudio,
 }) {
   if (!evaluacionRotacion) return null;
 
@@ -175,20 +177,21 @@ export function RotacionView({
 
         <button
           type="button"
-          onClick={onEscucharRotacion}
+          onClick={leyendo ? onDetenerAudio : onEscucharRotacion}
+          aria-pressed={leyendo}
           style={{
             width: "100%",
             padding: "10px",
             fontSize: "15px",
             fontWeight: "bold",
             borderRadius: "6px",
-            border: "none",
+            border: leyendo ? "2px solid #c62828" : "none",
             backgroundColor: "white",
-            color: "#111",
+            color: leyendo ? "#c62828" : "#111",
             cursor: "pointer",
           }}
         >
-          {t.escucharRotacion}
+          {leyendo ? t.detenerAudio : t.escucharRotacion}
         </button>
       </div>
     </section>

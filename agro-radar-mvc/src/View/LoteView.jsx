@@ -27,6 +27,8 @@ export function LoteView({
   onCambiarCultivoAnterior,
   evaluacionRotacion,
   onEscucharRotacion,
+  audioActivo = null,
+  onDetenerAudio,
 }) {
   const t = textos;
   const fuentesLimpias = [
@@ -301,7 +303,8 @@ export function LoteView({
 
           <button
             type="button"
-            onClick={onEscuchar}
+            onClick={audioActivo === "diagnostico" ? onDetenerAudio : onEscuchar}
+            aria-pressed={audioActivo === "diagnostico"}
             style={{
               marginTop: "14px",
               width: "100%",
@@ -309,13 +312,13 @@ export function LoteView({
               fontSize: "16px",
               fontWeight: "bold",
               borderRadius: "8px",
-              border: "none",
+              border: audioActivo === "diagnostico" ? "2px solid #c62828" : "none",
               backgroundColor: "white",
-              color: "#111111",
+              color: audioActivo === "diagnostico" ? "#c62828" : "#111111",
               cursor: "pointer",
             }}
           >
-            {t.escuchar}
+            {audioActivo === "diagnostico" ? t.detenerAudio : t.escuchar}
           </button>
         </div>
       )}
@@ -328,6 +331,8 @@ export function LoteView({
         onCambiarCultivoAnterior={onCambiarCultivoAnterior}
         evaluacionRotacion={evaluacionRotacion}
         onEscucharRotacion={onEscucharRotacion}
+        leyendo={audioActivo === "rotacion"}
+        onDetenerAudio={onDetenerAudio}
       />
     </div>
   );
