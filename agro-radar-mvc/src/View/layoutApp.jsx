@@ -2,10 +2,10 @@ export function LayoutApp({ idioma = "en", onCambiarIdioma, textos = {}, childre
   return (
     <div
       style={{
-        maxWidth: "520px",
+        maxWidth: "1000px",
         margin: "0 auto",
         padding: "20px",
-        fontFamily: "sans-serif",
+        fontFamily: "Poppins, sans-serif",
         minHeight: "88vh",
         display: "flex",
         flexDirection: "column",
