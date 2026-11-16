@@ -13,7 +13,7 @@
 
 **Agro Radar** is a global agricultural decision-support web application built by **Team Three Stars (Equipo Tres Estrellas)** for the **2026 NASA International Space Apps Challenge** (*Adapting Farms with NASA Data*).
 
-Designed for farmers anywhere in the world—including those without access to expensive IoT soil probes or complex desktop software—Agro Radar translates satellite agroclimatology, multi-depth soil moisture profiles, and crop history into clear, actionable guidance on **when to sow**, **when to harvest**, and **how to rotate crops**[cite: 2, 6].
+Designed for farmers anywhere in the world—including those without access to expensive IoT soil probes or complex desktop software—Agro Radar translates satellite agroclimatology, multi-depth soil moisture profiles, and crop history into clear, actionable guidance on **when to sow**, **when to harvest**, and **how to rotate crops**.
 
 ---
 
@@ -25,26 +25,26 @@ Designed for farmers anywhere in the world—including those without access to e
   * **Instrument Measurement Mode:** Manual input support for farmers using physical soil moisture sensors or gravimetric field measurements, overriding remote surface estimates while retaining NASA POWER climate context.
 * **🌱 Sowing Diagnostics:** Evaluates surface germination moisture alongside sub-surface water reserves to prevent premature planting into dry soil profiles.
 * **🚜 Harvesting Diagnostics:** Inverts agronomic thresholds by analyzing surface ground firmness, ambient relative humidity, and short-term precipitation probability to prevent soil compaction, machinery bogging, and high-moisture grain harvesting.
-* **🔄 Crop Soil Depletion & Rotation Engine ("Field Memory"):** Calculates estimated water and nutrient depletion from the previous harvest (*Soybean, Corn, Wheat/Soybean double-crop, Cotton, Sunflower, Alfalfa/Pasture*) and recommends optimal restorative crop rotations[cite: 3, 6].
+* **🔄 Crop Soil Depletion & Rotation Engine ("Field Memory"):** Calculates estimated water and nutrient depletion from the previous harvest (*Soybean, Corn, Wheat/Soybean double-crop, Cotton, Sunflower, Alfalfa/Pasture*) and recommends optimal restorative crop rotations.
 * **🚦 Traffic-Light UI & Hands-Free Voice Readout:** Abstracts technical telemetry into high-contrast **Green / Yellow / Red** decision cards paired with native bilingual (**English / Spanish**) Text-to-Speech (`Web Speech API`) for field accessibility.
-* **📍 Auto-Geolocation + Interactive Map Fallback:** Automatically detects field coordinates via browser GPS (`navigator.geolocation`) with reverse geocoding and an interactive **Leaflet** map selector when GPS accuracy is unavailable[cite: 6].
+* **📍 Auto-Geolocation + Interactive Map Fallback:** Automatically detects field coordinates via browser GPS (`navigator.geolocation`) with reverse geocoding and an interactive **Leaflet** map selector when GPS accuracy is unavailable.
 
 ---
 
 ## 🛰️ Use of NASA Data & Scientific Architecture
 
-Agro Radar directly integrates the **NASA POWER (Prediction Of Worldwide Energy Resources) Agroclimatology API** (`community=AG`) and fuses it with real-time multi-depth soil and weather telemetry[cite: 6]:
+Agro Radar directly integrates the **NASA POWER (Prediction Of Worldwide Energy Resources) Agroclimatology API** (`community=AG`) and fuses it with real-time multi-depth soil and weather telemetry:
 
 | Data Source | Parameters Used | Depth / Resolution | Role in Agro Radar |
 | :--- | :--- | :--- | :--- |
-| **NASA POWER API** (`power.larc.nasa.gov`)[cite: 6] | `GWETTOP`, `GWETROOT`, `PRECTOTCORR`, `RH2M`[cite: 6] | `0–5 cm` & `0–100 cm` (Daily agroclimatology)[cite: 6] | Establishes root-zone water reserves, historical climate context, and post-harvest soil depletion baselines[cite: 6]. |
-| **Open-Meteo API** (`api.open-meteo.com`)[cite: 6, 9] | `soil_moisture_0_to_1cm`, `soil_moisture_9_to_27cm`, `relative_humidity_2m`, `precipitation_probability`[cite: 6, 9] | `0–1 cm` & `9–27 cm` (Hourly real-time)[cite: 6] | Powers immediate operational sowing & harvesting traffic-light alerts[cite: 6]. |
+| **NASA POWER API** (`power.larc.nasa.gov`) | `GWETTOP`, `GWETROOT`, `PRECTOTCORR`, `RH2M` | `0–5 cm` & `0–100 cm` (Daily agroclimatology) | Establishes root-zone water reserves, historical climate context, and post-harvest soil depletion baselines. |
+| **Open-Meteo API** (`api.open-meteo.com`) | `soil_moisture_0_to_1cm`, `soil_moisture_9_to_27cm`, `relative_humidity_2m`, `precipitation_probability` | `0–1 cm` & `9–27 cm` (Hourly real-time) | Powers immediate operational sowing & harvesting traffic-light alerts. |
 
 ---
 
 ## 🏗️ Software Architecture (MVC)
 
-The codebase is strictly modularized under the **Model–View–Controller (MVC)** pattern to separate agronomic business logic and API orchestration from stateless UI rendering[cite: 3, 6]:
+The codebase is strictly modularized under the **Model–View–Controller (MVC)** pattern to separate agronomic business logic and API orchestration from stateless UI rendering:
 
 ```text
 rotadorCultivos/
@@ -77,3 +77,66 @@ rotadorCultivos/
 ├── jsconfig.json
 ├── package.json
 └── vite.config.js
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+* **Node.js** (v18.0 or higher)
+* **npm**
+
+### Local Development Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/CristianEnriquezG/rotadorCultivos.git
+   cd rotadorCultivos
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in your browser:**
+   Visit `http://localhost:5173`. Both NASA POWER and Open-Meteo endpoints are public and CORS-enabled, so no API keys are required to run the app locally.
+
+### Production Build
+
+```bash
+npm run build
+```
+
+---
+
+## 🛠️ Tech Stack
+
+* **Frontend:** React, JavaScript (ES6+), HTML5, CSS3
+* **Build Tool & Linter:** Vite, Oxlint
+* **Mapping & Geocoding:** Leaflet, OpenStreetMap, Reverse Geocoding API
+* **Browser APIs:** Geolocation API (`navigator.geolocation`), Web Speech API (`window.speechSynthesis`)
+* **Scientific & Weather APIs:** NASA POWER Agroclimatology REST API, Open-Meteo Soil & Forecast API
+
+---
+
+## 👥 Team Three Stars (Equipo Tres Estrellas ⭐⭐⭐)
+
+Developed from **Santiago del Estero, Argentina** for the **2026 NASA Space Apps Challenge**:
+
+* **Maximiliano Trejo**
+* **Nicolás Gauna**
+* **Cristian Enríquez**
+* **Máximo Varela**
+
+---
+
+## 📄 License
+
+This project is open-source and available under the **MIT License**.
